@@ -1,69 +1,70 @@
-import Image from "next/image";
+"use client";
+
+import { useRouter } from "next/navigation";
+import { useEffect, useState } from "react";
+import Header from "./components/layout/Header";
+import Sidebar from "./components/layout/Sidebar";
+import InfoCard from "./components/conciliaciones/InfoCard";
+import RecentTable from "./components/conciliaciones/RecentTable";
+import ResultMessage from "./components/conciliaciones/ResultMessage";
+import SearchCard from "./components/conciliaciones/SearchCard";
+import {
+  crearConciliacion,
+  obtenerConciliacionPorNumeroOrden,
+  obtenerConciliaciones,
+} from "../services/conciliacionesService";
 
 export default function Home() {
-  return (
-    <div className="flex flex-col flex-1 items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex flex-1 w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert h-5 w-[100px]"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
-        />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the{" "}
-            <code className="rounded bg-black/[.06] px-1.5 py-0.5 font-mono text-[0.9em] dark:bg-white/[.08]">
-              page.js
-            </code>{" "}
-            file.
-          </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Learning
-            </a>{" "}
-            center.
-          </p>
-        </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert h-[14px] w-4"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={14}
-            />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
-        </div>
-      </main>
-    </div>
-  );
+  const router = useRouter();
+  const [order, setOrder] = useState("");
+  const [error, setError] = useState("");
+  const [result, setResult] = useState(null);
+  const [selected, setSelected] = useState(null);
+  const [reconciliations, setReconciliations] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState("");
+
+  useEffect(() => {
+    obtenerConciliaciones()
+      .then(setReconciliations)
+      .catch(() => setLoadError("No fue posible cargar las conciliaciones."))
+      .finally(() => setLoading(false));
+  }, []);
+
+  useEffect(() => {
+    console.log(reconciliations);
+  }, [reconciliations]);
+
+  async function handleSearch(event) {
+    event.preventDefault();
+    if (!order) { setError("Ingresa un número de orden para continuar."); setResult(null); return; }
+    if (!/^\d+$/.test(order)) { setError("El número de orden solo debe contener números, sin espacios."); setResult(null); return; }
+    setError("");
+    try {
+      const match = await obtenerConciliacionPorNumeroOrden(order);
+      setResult(match ? { match } : { order });
+      setSelected(match);
+    } catch {
+      setError("No fue posible buscar la conciliación.");
+      setResult(null);
+      setSelected(null);
+    }
+  }
+
+  function openRecord(record) {
+    if (!record) { router.push("/historial"); return; }
+    router.push(`/conciliaciones/${record.numeroOrden}`);
+  }
+
+  async function createReconciliation() {
+    if (!result?.order) return;
+    try {
+      await crearConciliacion(result.order);
+      router.push(`/conciliaciones/${result.order}`);
+    } catch (creationError) {
+      setError(creationError.message);
+    }
+  }
+
+  return <div className="app-shell"><Sidebar activeView="inicio" /><main className="main-content"><Header />{loading && <p>Cargando conciliaciones...</p>}{loadError && <div className="alert info-alert"><div className="alert-symbol">i</div><div>{loadError}</div></div>}<div className="dashboard-grid"><div><SearchCard order={order} setOrder={setOrder} onSearch={handleSearch} onNew={() => router.push("/conciliaciones/nueva")} error={error} /><ResultMessage result={result} onCreate={createReconciliation} onOpen={openRecord} /></div><InfoCard reconciliation={selected} /></div><RecentTable reconciliations={reconciliations} onOpen={openRecord} /></main></div>;
 }

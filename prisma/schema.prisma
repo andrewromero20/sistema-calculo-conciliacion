@@ -1,0 +1,86 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Conciliacion {
+  id                 Int               @id @default(autoincrement())
+  numeroOrden        String            @unique
+  estadoConciliacion String
+  fechaCreacion      DateTime          @default(now())
+  fechaActualizacion DateTime          @updatedAt
+  materiales         Material[]
+  historialCambios   HistorialCambio[]
+}
+
+model Material {
+  id Int @id @default(autoincrement())
+
+  descripcion String
+  codigoSAP   String
+  numeroOrden String
+
+  unidadMedida String
+
+  blisterPorCaja     Int?
+  tabletasPorBlister Int?
+
+  cantidadRealAcondicionada Float?
+  capacidadCajaEmpaque     Float?
+
+  cantidadSurtidaA   Float?
+  cantidadAdicionalB Float?
+  cantidadDevueltaC  Float?
+
+  telecamara    Float?
+  hermeticidad  Float?
+  otraMerma     Float?
+  cajasTomadasMuestra     Float?
+  cajasUtilizadasArranque Float?
+
+  totalRecibidaD Float?
+
+  resultadoE Float?
+  resultadoF Float?
+  resultadoG Float?
+
+  totalUtilizadaH Float?
+
+  diferencia           Float?
+  porcentajeDiferencia Float?
+
+  limitePermitido Float?
+
+  estadoMaterial String?
+
+  conciliacionId Int
+  conciliacion   Conciliacion @relation(fields: [conciliacionId], references: [id])
+}
+
+model HistorialCambio {
+  id Int @id @default(autoincrement())
+
+  accion          String
+  campoModificado String?
+
+  valorAnterior String?
+  valorNuevo    String?
+
+  usuario String
+
+  fechaHora DateTime @default(now())
+
+  conciliacionId Int
+  conciliacion   Conciliacion @relation(fields: [conciliacionId], references: [id])
+}

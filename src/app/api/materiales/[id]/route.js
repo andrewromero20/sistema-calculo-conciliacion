@@ -1,0 +1,325 @@
+import { prisma } from "@/lib/prisma";
+import {
+  calcularDiferenciaAH,
+  calcularECajaPlegadiza,
+  calcularFCajaPlegadiza,
+  calcularGCajaPlegadiza,
+  calcularETableta,
+  calcularEEtiquetaColectiva,
+  calcularFTableta,
+  calcularFEtiquetaColectiva,
+  calcularGTableta,
+  calcularGEtiquetaColectiva,
+  calcularPorcentajeDiferencia,
+  calcularTotalRecibido,
+  calcularTotalUtilizadoAH,
+} from "@/lib/calculosMateriales";
+
+const materialFields = [
+  "descripcion",
+  "codigoSAP",
+  "numeroOrden",
+  "unidadMedida",
+  "blisterPorCaja",
+  "tabletasPorBlister",
+  "cantidadRealAcondicionada",
+  "capacidadCajaEmpaque",
+  "cantidadSurtidaA",
+  "cantidadAdicionalB",
+  "cantidadDevueltaC",
+  "telecamara",
+  "hermeticidad",
+  "otraMerma",
+  "cajasTomadasMuestra",
+  "cajasUtilizadasArranque",
+  "totalRecibidaD",
+  "resultadoE",
+  "resultadoF",
+  "resultadoG",
+  "totalUtilizadaH",
+  "diferencia",
+  "porcentajeDiferencia",
+  "limitePermitido",
+  "estadoMaterial",
+  "conciliacionId",
+];
+
+const materialTypes = [
+  "CAJA PLEGADIZA",
+  "ETIQUETA COLECTIVA",
+  "CAJA EMPAQUE",
+  "FOIL ALUMINIO",
+  "FOIL PVC",
+  "SELLO GARANTÍA",
+  "INSTRUCTIVO",
+  "TABLETA",
+];
+
+const numericMaterialFields = new Set([
+  "blisterPorCaja",
+  "tabletasPorBlister",
+  "cantidadRealAcondicionada",
+  "capacidadCajaEmpaque",
+  "cantidadSurtidaA",
+  "cantidadAdicionalB",
+  "cantidadDevueltaC",
+  "telecamara",
+  "hermeticidad",
+  "otraMerma",
+  "cajasTomadasMuestra",
+  "cajasUtilizadasArranque",
+  "totalRecibidaD",
+  "resultadoE",
+  "resultadoF",
+  "resultadoG",
+  "totalUtilizadaH",
+  "diferencia",
+  "porcentajeDiferencia",
+  "limitePermitido",
+]);
+
+function getId(value) {
+  const id = Number(value);
+  return Number.isInteger(id) && id > 0 ? id : null;
+}
+
+function pickMaterialFields(body) {
+  return Object.fromEntries(
+    materialFields
+      .filter((field) => body[field] !== undefined)
+      .map((field) => [field, numericMaterialFields.has(field) ? normalizeOptionalNumber(body[field]) : body[field]]),
+  );
+}
+
+function normalizeOptionalNumber(value) {
+  if (value === "" || value === null || value === undefined) {
+    return null;
+  }
+
+  const number = Number(value);
+  return Number.isFinite(number) ? number : null;
+}
+
+export async function GET(request, { params }) {
+  const { id: rawId } = await params;
+  const id = getId(rawId);
+
+  if (!id) {
+    return Response.json(
+      { error: "El identificador del material no es válido.", idRecibido: rawId },
+      { status: 400 },
+    );
+  }
+
+  const material = await prisma.material.findUnique({
+    where: { id },
+    include: { conciliacion: true },
+  });
+
+  if (!material) {
+    return Response.json({ error: "Material no encontrado.", id }, { status: 404 });
+  }
+
+  return Response.json(material);
+}
+
+export async function PUT(request, { params }) {
+  const id = getId((await params).id);
+
+  if (!id) {
+    return Response.json({ error: "El id debe ser un entero positivo." }, { status: 400 });
+  }
+
+  const data = pickMaterialFields(await request.json());
+
+  if (Object.keys(data).length === 0) {
+    return Response.json(
+      { error: "Debes enviar al menos un campo para actualizar." },
+      { status: 400 },
+    );
+  }
+
+  if (data.descripcion !== undefined && !materialTypes.includes(data.descripcion)) {
+    return Response.json(
+      { error: "La descripción seleccionada no es válida." },
+      { status: 400 },
+    );
+  }
+
+  try {
+    const currentMaterial = await prisma.material.findUnique({ where: { id } });
+
+    if (!currentMaterial) {
+      return Response.json({ error: "Material no encontrado." }, { status: 404 });
+    }
+
+    const nextData = { ...currentMaterial, ...data };
+
+    if (nextData.descripcion === "TABLETA") {
+      const cantidadAdicionalB = nextData.cantidadAdicionalB ?? 0;
+      const cantidadDevueltaC = nextData.cantidadDevueltaC ?? 0;
+      const totalRecibidaD = calcularTotalRecibido(
+        nextData.cantidadSurtidaA,
+        cantidadAdicionalB,
+        cantidadDevueltaC,
+      );
+      const resultadoE = calcularETableta(
+        nextData.cantidadRealAcondicionada,
+        nextData.tabletasPorBlister,
+      );
+      const resultadoF = calcularFTableta({
+        telecamara: nextData.telecamara,
+        hermeticidad: nextData.hermeticidad,
+        otraMerma: nextData.otraMerma,
+        tabletasPorBlister: nextData.tabletasPorBlister,
+      });
+      const resultadoG = calcularGTableta(
+        nextData.cajasTomadasMuestra,
+        nextData.tabletasPorBlister,
+      );
+      const totalUtilizadaH = calcularTotalUtilizadoAH(resultadoE, resultadoF, resultadoG);
+      const diferencia = calcularDiferenciaAH(totalRecibidaD, totalUtilizadaH);
+      const porcentajeDiferencia = calcularPorcentajeDiferencia(totalRecibidaD, diferencia);
+      const faltanValores = [
+        totalRecibidaD,
+        resultadoE,
+        resultadoF,
+        resultadoG,
+        totalUtilizadaH,
+        diferencia,
+      ].some((value) => value === null);
+
+      Object.assign(data, {
+        cantidadAdicionalB,
+        cantidadDevueltaC,
+        totalRecibidaD,
+        resultadoE,
+        resultadoF,
+        resultadoG,
+        totalUtilizadaH,
+        diferencia,
+        porcentajeDiferencia,
+        estadoMaterial: faltanValores ? "CAPTURA_INCOMPLETA" : "PENDIENTE_DE_REVISION",
+      });
+    }
+
+    if (nextData.descripcion === "ETIQUETA COLECTIVA") {
+      const totalRecibidaD = calcularTotalRecibido(
+        nextData.cantidadSurtidaA,
+        nextData.cantidadAdicionalB,
+        nextData.cantidadDevueltaC,
+      );
+      const resultadoE = calcularEEtiquetaColectiva(
+        nextData.cantidadRealAcondicionada,
+        nextData.capacidadCajaEmpaque,
+      );
+      const resultadoF = calcularFEtiquetaColectiva(nextData.otraMerma);
+      const resultadoG = calcularGEtiquetaColectiva(nextData.cajasTomadasMuestra);
+      const totalUtilizadaH = calcularTotalUtilizadoAH(resultadoE, resultadoF, resultadoG);
+      const diferencia = calcularDiferenciaAH(totalRecibidaD, totalUtilizadaH);
+      const porcentajeDiferencia = calcularPorcentajeDiferencia(totalRecibidaD, diferencia);
+      const faltanValores = [
+        totalRecibidaD,
+        resultadoE,
+        resultadoF,
+        resultadoG,
+        totalUtilizadaH,
+        diferencia,
+      ].some((value) => value === null);
+      const estadoMaterial = faltanValores
+        ? "CAPTURA_INCOMPLETA"
+        : Math.abs(diferencia) <= 10
+          ? "DENTRO_DEL_LIMITE"
+          : "FUERA_DEL_LIMITE";
+
+      Object.assign(data, {
+        totalRecibidaD,
+        resultadoE,
+        resultadoF,
+        resultadoG,
+        totalUtilizadaH,
+        diferencia,
+        porcentajeDiferencia,
+        limitePermitido: 10,
+        estadoMaterial,
+      });
+    }
+
+    if (nextData.descripcion === "CAJA PLEGADIZA") {
+      const totalRecibidaD = calcularTotalRecibido(
+        nextData.cantidadSurtidaA,
+        nextData.cantidadAdicionalB,
+        nextData.cantidadDevueltaC,
+      );
+      const resultadoE = calcularECajaPlegadiza(nextData.cantidadRealAcondicionada);
+      const resultadoF = calcularFCajaPlegadiza(nextData.otraMerma);
+      const resultadoG = calcularGCajaPlegadiza(
+        nextData.cajasTomadasMuestra,
+        nextData.cajasUtilizadasArranque,
+      );
+      const totalUtilizadaH = calcularTotalUtilizadoAH(resultadoE, resultadoF, resultadoG);
+      const diferencia = calcularDiferenciaAH(totalRecibidaD, totalUtilizadaH);
+      const porcentajeDiferencia = calcularPorcentajeDiferencia(totalRecibidaD, diferencia);
+      const faltanValores = [
+        totalRecibidaD,
+        resultadoE,
+        resultadoF,
+        resultadoG,
+        totalUtilizadaH,
+        diferencia,
+      ].some((value) => value === null);
+      const estadoMaterial = faltanValores
+        ? "CAPTURA_INCOMPLETA"
+        : porcentajeDiferencia !== null && porcentajeDiferencia <= 1
+          ? "DENTRO_DEL_LIMITE"
+          : "FUERA_DEL_LIMITE";
+
+      Object.assign(data, {
+        totalRecibidaD,
+        resultadoE,
+        resultadoF,
+        resultadoG,
+        totalUtilizadaH,
+        diferencia,
+        porcentajeDiferencia,
+        limitePermitido: 1,
+        estadoMaterial,
+      });
+    }
+
+    const material = await prisma.material.update({ where: { id }, data });
+    return Response.json(material);
+  } catch (error) {
+    if (error.code === "P2025") {
+      return Response.json({ error: "Material no encontrado." }, { status: 404 });
+    }
+
+    if (error.code === "P2003") {
+      return Response.json(
+        { error: "La conciliación indicada no existe." },
+        { status: 404 },
+      );
+    }
+
+    throw error;
+  }
+}
+
+export async function DELETE(request, { params }) {
+  const id = getId((await params).id);
+
+  if (!id) {
+    return Response.json({ error: "El id debe ser un entero positivo." }, { status: 400 });
+  }
+
+  try {
+    await prisma.material.delete({ where: { id } });
+    return new Response(null, { status: 204 });
+  } catch (error) {
+    if (error.code === "P2025") {
+      return Response.json({ error: "Material no encontrado." }, { status: 404 });
+    }
+
+    throw error;
+  }
+}

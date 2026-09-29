@@ -1,0 +1,3 @@
+-- AlterTable
+ALTER TABLE "Material" ADD COLUMN "codigoSAP" TEXT NOT NULL DEFAULT '';
+ALTER TABLE "Material" ALTER COLUMN "codigoSAP" DROP DEFAULT;

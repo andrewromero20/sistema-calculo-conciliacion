@@ -39,3 +39,21 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+/src/generated/prisma
+
+# AI assistants and local agent configuration
+/.agents/
+/.claude/
+/.cursor/
+/.devin/
+
+# AI instruction files
+/AGENTS.md
+/CLAUDE.md
+
+# Local backups
+/page copy.js
+*.backup.js
+*.backup.jsx
+*.bak

@@ -31,14 +31,36 @@ export default function NewReconciliationPage() {
   }
 
   async function createReconciliation() {
-    if (!result?.order) return;
-    try {
-      await crearConciliacion(result.order);
-      router.push(`/conciliaciones/${result.order}`);
-    } catch (creationError) {
-      setError(creationError.message);
-    }
+
+  if (!result?.order) {
+    console.error(
+      "No se puede crear porque result.order está vacío",
+      result
+    );
+    return;
   }
+
+  try {
+    const nuevaConciliacion =
+      await crearConciliacion(result.order);
+
+
+    router.push(
+      `/conciliaciones/${nuevaConciliacion.numeroOrden}`
+    );
+  } catch (creationError) {
+    console.error(
+      "Error creando conciliación:",
+      creationError
+    );
+
+    setError(
+      creationError instanceof Error
+        ? creationError.message
+        : "No fue posible crear la conciliación."
+    );
+  }
+}
 
   return <div className="app-shell"><Sidebar activeView="nueva" /><main className="main-content"><Header title="Nueva conciliación" description="Captura el número de orden para iniciar una conciliación." /><div className="dashboard-grid"><div><SearchCard order={order} setOrder={setOrder} onSearch={handleSearch} onNew={() => router.push("/")} error={error} /><ResultMessage result={result} onCreate={createReconciliation} onOpen={(record) => router.push(`/conciliaciones/${record.numeroOrden}`)} /></div></div></main></div>;
 }

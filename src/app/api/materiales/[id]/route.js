@@ -78,6 +78,21 @@ const numericMaterialFields = new Set([
   "limitePermitido",
 ]);
 
+const nonNegativeMaterialFields = [
+  "cantidadSurtidaA",
+  "cantidadAdicionalB",
+  "cantidadDevueltaC",
+  "cantidadRealAcondicionada",
+  "capacidadCajaEmpaque",
+  "tabletasPorBlister",
+  "blisterPorCaja",
+  "telecamara",
+  "hermeticidad",
+  "otraMerma",
+  "cajasTomadasMuestra",
+  "cajasUtilizadasArranque",
+];
+
 function getId(value) {
   const id = Number(value);
   return Number.isInteger(id) && id > 0 ? id : null;
@@ -135,6 +150,20 @@ export async function PUT(request, { params }) {
   if (Object.keys(data).length === 0) {
     return Response.json(
       { error: "Debes enviar al menos un campo para actualizar." },
+      { status: 400 },
+    );
+  }
+
+  const negativeFields = nonNegativeMaterialFields.filter((field) =>
+    data[field] !== undefined && data[field] !== null && data[field] < 0,
+  );
+
+  if (negativeFields.length > 0) {
+    return Response.json(
+      {
+        error: "Las cantidades no pueden ser negativas.",
+        campos: negativeFields,
+      },
       { status: 400 },
     );
   }

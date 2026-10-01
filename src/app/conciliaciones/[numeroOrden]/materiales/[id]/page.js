@@ -48,6 +48,23 @@ const calculatedMaterialTypes = [
   "CAJA EMPAQUE",
 ];
 
+const nonNegativeFields = new Set([
+  "cantidadSurtidaA",
+  "cantidadAdicionalB",
+  "cantidadDevueltaC",
+  "cantidadRealAcondicionada",
+  "capacidadCajaEmpaque",
+  "tabletasPorBlister",
+  "blisterPorCaja",
+  "telecamara",
+  "hermeticidad",
+  "otraMerma",
+  "cajasTomadasMuestra",
+  "cajasUtilizadasArranque",
+]);
+
+const negativeQuantityError = "Las cantidades no pueden ser negativas";
+
 function toNumber(value) {
   const number = Number(value);
   return Number.isFinite(number) ? number : 0;
@@ -256,7 +273,14 @@ export default function MaterialCapturePage() {
     if (isTablet && (field === "cantidadAdicionalB" || field === "cantidadDevueltaC")) {
       return;
     }
+
+    if (nonNegativeFields.has(field) && value !== "" && Number(value) < 0) {
+      setError(negativeQuantityError);
+      return;
+    }
+
     setValues((currentValues) => ({ ...currentValues, [field]: value }));
+    setError((currentError) => currentError === negativeQuantityError ? "" : currentError);
   }
 
   function calculateResultE() {
@@ -409,6 +433,7 @@ export default function MaterialCapturePage() {
             A. Cantidad surtida
             <input
               type="number"
+              min="0"
               step="any"
               value={values.cantidadSurtidaA ?? ""}
               onChange={(event) =>
@@ -421,6 +446,7 @@ export default function MaterialCapturePage() {
             B. Cantidad adicional
             <input
               type="number"
+              min="0"
               step="any"
               value={isTablet ? 0 : values.cantidadAdicionalB ?? ""}
               onChange={(event) =>
@@ -434,6 +460,7 @@ export default function MaterialCapturePage() {
             C. Cantidad devuelta
             <input
               type="number"
+              min="0"
               step="any"
               value={isTablet ? 0 : values.cantidadDevueltaC ?? ""}
               onChange={(event) =>
@@ -459,7 +486,7 @@ export default function MaterialCapturePage() {
               <input
                 type="number"
                 step="1"
-                min="1"
+                min="0"
                 value={values.tabletasPorBlister ?? ""}
                 onChange={(event) =>
                   updateValue("tabletasPorBlister", event.target.value)
@@ -498,7 +525,7 @@ export default function MaterialCapturePage() {
                 <input
                   type="number"
                   step="1"
-                  min="1"
+                  min="0"
                   value={
                     values.capacidadCajaEmpaque ?? ""
                   }
@@ -714,12 +741,12 @@ function CajaPlegadizaCaptureForm({ material, numeroOrden, values, updateValue, 
       ? porcentaje
       : `${Number(porcentaje).toFixed(2)} %`;
 
-  return <div className="app-shell"><Sidebar activeView="inicio" /><main className="main-content"><Header title={`Material: ${material.descripcion}`} description={`Orden ${numeroOrden}`} /><form className="card material-capture-card" onSubmit={onSubmit}><div className="section-heading"><div><h2>Captura de CAJA PLEGADIZA</h2><p>{material.codigoSAP} · {material.unidadMedida}</p></div><span className={`status-badge status-${safeStatus.toLowerCase()}`}>{friendlyStatus}</span></div><div className="capture-grid"><h3 className="capture-section-title">Cantidad recibida</h3><label>A. Cantidad surtida<input type="number" step="any" value={display(values.cantidadSurtidaA)} onChange={(event) => updateValue("cantidadSurtidaA", event.target.value)} /></label><label>B. Cantidad adicional<input type="number" step="any" value={display(values.cantidadAdicionalB)} onChange={(event) => updateValue("cantidadAdicionalB", event.target.value)} /></label><label>C. Cantidad devuelta<input type="number" step="any" value={display(values.cantidadDevueltaC)} onChange={(event) => updateValue("cantidadDevueltaC", event.target.value)} /></label><label>D. Total recibida<input className="calculated-field" type="text" value={result(totalRecibida)} readOnly /></label><h3 className="capture-section-title">Cantidad utilizada E</h3><label>Cantidad real acondicionada<input type="number" step="any" value={display(values.cantidadRealAcondicionada)} onChange={(event) => updateValue("cantidadRealAcondicionada", event.target.value)} /></label><label>E. Cantidad utilizada<input className="calculated-field" type="text" value={result(resultadoE)} readOnly /></label><h3 className="capture-section-title">Merma F</h3><label>Merma registrada en la MBR<input type="number" step="any" value={display(values.otraMerma)} onChange={(event) => updateValue("otraMerma", event.target.value)} /></label><label>F. Merma total<input className="calculated-field" type="text" value={result(resultadoF)} readOnly /></label><h3 className="capture-section-title">Muestra G</h3><label>Cajas tomadas como muestra<input type="number" step="any" value={display(values.cajasTomadasMuestra)} onChange={(event) => updateValue("cajasTomadasMuestra", event.target.value)} /></label><label>Cajas utilizadas en arranque<input type="number" step="any" value={display(values.cajasUtilizadasArranque)} onChange={(event) => updateValue("cajasUtilizadasArranque", event.target.value)} /></label><label>Operación<input className="calculated-field" value={muestraOperation} readOnly /></label><label>G. Cantidad de muestra<input className="calculated-field" type="text" value={result(resultadoG)} readOnly /></label><h3 className="capture-section-title">Resultado final</h3><label>H. Total utilizada<input className="calculated-field" type="text" value={result(totalUtilizada)} readOnly /></label><label>Diferencia<input className="calculated-field" type="text" value={result(diferencia)} readOnly /></label><label>Porcentaje de diferencia<input className="calculated-field" type="text" value={porcentajeVisible} readOnly /></label><label>Límite permitido<input className="calculated-field" type="text" value="1.00 %" readOnly /></label><label>Estado<input className="calculated-field" type="text" value={friendlyStatus} readOnly /></label></div>{error && <p className="field-error">{error}</p>}<div className="button-row"><button className="button primary" type="submit" disabled={saving}>{saving ? "Guardando..." : "Guardar captura"}</button><Link className="button secondary" href={`/conciliaciones/${numeroOrden}`}>Cancelar</Link></div></form></main></div>;
+  return <div className="app-shell"><Sidebar activeView="inicio" /><main className="main-content"><Header title={`Material: ${material.descripcion}`} description={`Orden ${numeroOrden}`} /><form className="card material-capture-card" onSubmit={onSubmit}><div className="section-heading"><div><h2>Captura de CAJA PLEGADIZA</h2><p>{material.codigoSAP} · {material.unidadMedida}</p></div><span className={`status-badge status-${safeStatus.toLowerCase()}`}>{friendlyStatus}</span></div><div className="capture-grid"><h3 className="capture-section-title">Cantidad recibida</h3><label>A. Cantidad surtida<input type="number" min="0" step="any" value={display(values.cantidadSurtidaA)} onChange={(event) => updateValue("cantidadSurtidaA", event.target.value)} /></label><label>B. Cantidad adicional<input type="number" min="0" step="any" value={display(values.cantidadAdicionalB)} onChange={(event) => updateValue("cantidadAdicionalB", event.target.value)} /></label><label>C. Cantidad devuelta<input type="number" min="0" step="any" value={display(values.cantidadDevueltaC)} onChange={(event) => updateValue("cantidadDevueltaC", event.target.value)} /></label><label>D. Total recibida<input className="calculated-field" type="text" value={result(totalRecibida)} readOnly /></label><h3 className="capture-section-title">Cantidad utilizada E</h3><label>Cantidad real acondicionada<input type="number" min="0" step="any" value={display(values.cantidadRealAcondicionada)} onChange={(event) => updateValue("cantidadRealAcondicionada", event.target.value)} /></label><label>E. Cantidad utilizada<input className="calculated-field" type="text" value={result(resultadoE)} readOnly /></label><h3 className="capture-section-title">Merma F</h3><label>Merma registrada en la MBR<input type="number" min="0" step="any" value={display(values.otraMerma)} onChange={(event) => updateValue("otraMerma", event.target.value)} /></label><label>F. Merma total<input className="calculated-field" type="text" value={result(resultadoF)} readOnly /></label><h3 className="capture-section-title">Muestra G</h3><label>Cajas tomadas como muestra<input type="number" min="0" step="any" value={display(values.cajasTomadasMuestra)} onChange={(event) => updateValue("cajasTomadasMuestra", event.target.value)} /></label><label>Cajas utilizadas en arranque<input type="number" min="0" step="any" value={display(values.cajasUtilizadasArranque)} onChange={(event) => updateValue("cajasUtilizadasArranque", event.target.value)} /></label><label>Operación<input className="calculated-field" value={muestraOperation} readOnly /></label><label>G. Cantidad de muestra<input className="calculated-field" type="text" value={result(resultadoG)} readOnly /></label><h3 className="capture-section-title">Resultado final</h3><label>H. Total utilizada<input className="calculated-field" type="text" value={result(totalUtilizada)} readOnly /></label><label>Diferencia<input className="calculated-field" type="text" value={result(diferencia)} readOnly /></label><label>Porcentaje de diferencia<input className="calculated-field" type="text" value={porcentajeVisible} readOnly /></label><label>Límite permitido<input className="calculated-field" type="text" value="1.00 %" readOnly /></label><label>Estado<input className="calculated-field" type="text" value={friendlyStatus} readOnly /></label></div>{error && <p className="field-error">{error}</p>}<div className="button-row"><button className="button primary" type="submit" disabled={saving}>{saving ? "Guardando..." : "Guardar captura"}</button><Link className="button secondary" href={`/conciliaciones/${numeroOrden}`}>Cancelar</Link></div></form></main></div>;
 }
 
 function TabletaCaptureForm({ material, numeroOrden, values, updateValue, totalRecibida, resultadoE, resultadoF, resultadoG, totalUtilizada, diferencia, porcentaje, error, saving, onSubmit }) {
   const display = (value) => value ?? "";
   const unit = (value) => value === null || value === undefined ? "Pendiente" : value === "" ? "" : `${value} PZA`;
 
-  return <div className="app-shell"><Sidebar activeView="inicio" /><main className="main-content"><Header title={`Material: ${material.descripcion}`} description={`Orden ${numeroOrden}`} /><form className="card material-capture-card" onSubmit={onSubmit}><div className="section-heading"><div><h2>Captura de TABLETA</h2><p>{material.codigoSAP} · {material.unidadMedida}</p></div><StatusBadge status={material.estadoMaterial} /></div><div className="capture-grid"><h3>Cantidad recibida</h3><label>A. Cantidad surtida<input type="number" step="any" value={display(values.cantidadSurtidaA)} onChange={(event) => updateValue("cantidadSurtidaA", event.target.value)} /></label><label>B. Cantidad adicional<input type="number" step="any" value="0" readOnly /></label><label>C. Cantidad devuelta<input type="number" step="any" value="0" readOnly /></label><label>D. Total recibida<input className="calculated-field" type="text" value={unit(totalRecibida)} readOnly /></label><h3>Cantidad utilizada E</h3><label>Cantidad real acondicionada<input type="number" step="any" value={display(values.cantidadRealAcondicionada)} onChange={(event) => updateValue("cantidadRealAcondicionada", event.target.value)} /></label><label>Tabletas por blíster<input type="number" step="1" min="1" value={display(values.tabletasPorBlister)} onChange={(event) => updateValue("tabletasPorBlister", event.target.value)} /></label><label>Operación<input className="calculated-field" value={`${display(values.cantidadRealAcondicionada)} × ${display(values.tabletasPorBlister)}`} readOnly /></label><label>E. Cantidad utilizada<input className="calculated-field" type="text" value={unit(resultadoE)} readOnly /></label><h3>Merma F</h3><label>Telecámara (blísteres)<input type="number" step="any" value={display(values.telecamara)} onChange={(event) => updateValue("telecamara", event.target.value)} /></label><label>Hermeticidad (blísteres)<input type="number" step="any" value={display(values.hermeticidad)} onChange={(event) => updateValue("hermeticidad", event.target.value)} /></label><label>Otra merma (tabletas)<input type="number" step="any" value={display(values.otraMerma)} onChange={(event) => updateValue("otraMerma", event.target.value)} /></label><label>Desglose<input className="calculated-field" value={`${display(values.telecamara)} × ${display(values.tabletasPorBlister)} + ${display(values.hermeticidad)} × ${display(values.tabletasPorBlister)} + ${display(values.otraMerma)}`} readOnly /></label><label>F. Merma total<input className="calculated-field" type="text" value={unit(resultadoF)} readOnly /></label><h3>Muestra G</h3><label>Cajas tomadas como muestra<input type="number" step="any" value={display(values.cajasTomadasMuestra)} onChange={(event) => updateValue("cajasTomadasMuestra", event.target.value)} /></label><label>Operación<input className="calculated-field" value={`${display(values.cajasTomadasMuestra)} × ${display(values.tabletasPorBlister)}`} readOnly /></label><label>G. Cantidad de muestra<input className="calculated-field" type="text" value={unit(resultadoG)} readOnly /></label><h3>Resultado final</h3><label>H. Total utilizada<input className="calculated-field" type="text" value={unit(totalUtilizada)} readOnly /></label><label>Diferencia<input className="calculated-field" type="text" value={diferencia === "" ? "" : `${diferencia} PZA`} readOnly /></label><label>Porcentaje<input className="calculated-field" type="text" value={porcentaje === "" ? "" : `${porcentaje} %`} readOnly /></label></div>{error && <p className="field-error">{error}</p>}<div className="button-row"><button className="button primary" type="submit" disabled={saving}>{saving ? "Guardando..." : "Guardar captura"}</button><Link className="button secondary" href={`/conciliaciones/${numeroOrden}`}>Cancelar</Link></div></form></main></div>;
+  return <div className="app-shell"><Sidebar activeView="inicio" /><main className="main-content"><Header title={`Material: ${material.descripcion}`} description={`Orden ${numeroOrden}`} /><form className="card material-capture-card" onSubmit={onSubmit}><div className="section-heading"><div><h2>Captura de TABLETA</h2><p>{material.codigoSAP} · {material.unidadMedida}</p></div><StatusBadge status={material.estadoMaterial} /></div><div className="capture-grid"><h3>Cantidad recibida</h3><label>A. Cantidad surtida<input type="number" min="0" step="any" value={display(values.cantidadSurtidaA)} onChange={(event) => updateValue("cantidadSurtidaA", event.target.value)} /></label><label>B. Cantidad adicional<input type="number" min="0" step="any" value="0" readOnly /></label><label>C. Cantidad devuelta<input type="number" min="0" step="any" value="0" readOnly /></label><label>D. Total recibida<input className="calculated-field" type="text" value={unit(totalRecibida)} readOnly /></label><h3>Cantidad utilizada E</h3><label>Cantidad real acondicionada<input type="number" min="0" step="any" value={display(values.cantidadRealAcondicionada)} onChange={(event) => updateValue("cantidadRealAcondicionada", event.target.value)} /></label><label>Tabletas por blíster<input type="number" step="1" min="0" value={display(values.tabletasPorBlister)} onChange={(event) => updateValue("tabletasPorBlister", event.target.value)} /></label><label>Operación<input className="calculated-field" value={`${display(values.cantidadRealAcondicionada)} × ${display(values.tabletasPorBlister)}`} readOnly /></label><label>E. Cantidad utilizada<input className="calculated-field" type="text" value={unit(resultadoE)} readOnly /></label><h3>Merma F</h3><label>Telecámara (blísteres)<input type="number" min="0" step="any" value={display(values.telecamara)} onChange={(event) => updateValue("telecamara", event.target.value)} /></label><label>Hermeticidad (blísteres)<input type="number" min="0" step="any" value={display(values.hermeticidad)} onChange={(event) => updateValue("hermeticidad", event.target.value)} /></label><label>Otra merma (tabletas)<input type="number" min="0" step="any" value={display(values.otraMerma)} onChange={(event) => updateValue("otraMerma", event.target.value)} /></label><label>Desglose<input className="calculated-field" value={`${display(values.telecamara)} × ${display(values.tabletasPorBlister)} + ${display(values.hermeticidad)} × ${display(values.tabletasPorBlister)} + ${display(values.otraMerma)}`} readOnly /></label><label>F. Merma total<input className="calculated-field" type="text" value={unit(resultadoF)} readOnly /></label><h3>Muestra G</h3><label>Cajas tomadas como muestra<input type="number" min="0" step="any" value={display(values.cajasTomadasMuestra)} onChange={(event) => updateValue("cajasTomadasMuestra", event.target.value)} /></label><label>Operación<input className="calculated-field" value={`${display(values.cajasTomadasMuestra)} × ${display(values.tabletasPorBlister)}`} readOnly /></label><label>G. Cantidad de muestra<input className="calculated-field" type="text" value={unit(resultadoG)} readOnly /></label><h3>Resultado final</h3><label>H. Total utilizada<input className="calculated-field" type="text" value={unit(totalUtilizada)} readOnly /></label><label>Diferencia<input className="calculated-field" type="text" value={diferencia === "" ? "" : `${diferencia} PZA`} readOnly /></label><label>Porcentaje<input className="calculated-field" type="text" value={porcentaje === "" ? "" : `${porcentaje} %`} readOnly /></label></div>{error && <p className="field-error">{error}</p>}<div className="button-row"><button className="button primary" type="submit" disabled={saving}>{saving ? "Guardando..." : "Guardar captura"}</button><Link className="button secondary" href={`/conciliaciones/${numeroOrden}`}>Cancelar</Link></div></form></main></div>;
 }

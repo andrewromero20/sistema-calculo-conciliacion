@@ -1,9 +1,12 @@
 import { prisma } from "@/lib/prisma";
 import {
   calcularDiferenciaAH,
+  calcularECajaEmpaque,
   calcularECajaPlegadiza,
   calcularFCajaPlegadiza,
+  calcularFCajaEmpaque,
   calcularGCajaPlegadiza,
+  calcularGCajaEmpaque,
   calcularETableta,
   calcularEEtiquetaColectiva,
   calcularFTableta,
@@ -312,6 +315,48 @@ export async function PUT(request, { params }) {
         diferencia,
         porcentajeDiferencia,
         limitePermitido: 1,
+        estadoMaterial,
+      });
+    }
+
+    if (nextData.descripcion === "CAJA EMPAQUE") {
+      const totalRecibidaD = calcularTotalRecibido(
+        nextData.cantidadSurtidaA,
+        nextData.cantidadAdicionalB,
+        nextData.cantidadDevueltaC,
+      );
+      const resultadoE = calcularECajaEmpaque(
+        nextData.cantidadRealAcondicionada,
+        nextData.capacidadCajaEmpaque,
+      );
+      const resultadoF = calcularFCajaEmpaque(nextData.otraMerma);
+      const resultadoG = calcularGCajaEmpaque(nextData.cajasTomadasMuestra);
+      const totalUtilizadaH = calcularTotalUtilizadoAH(resultadoE, resultadoF, resultadoG);
+      const diferencia = calcularDiferenciaAH(totalRecibidaD, totalUtilizadaH);
+      const porcentajeDiferencia = calcularPorcentajeDiferencia(totalRecibidaD, diferencia);
+      const faltanValores = [
+        totalRecibidaD,
+        resultadoE,
+        resultadoF,
+        resultadoG,
+        totalUtilizadaH,
+        diferencia,
+      ].some((value) => value === null);
+      const estadoMaterial = faltanValores
+        ? "CAPTURA_INCOMPLETA"
+        : Math.abs(diferencia) <= 10
+          ? "DENTRO_DEL_LIMITE"
+          : "FUERA_DEL_LIMITE";
+
+      Object.assign(data, {
+        totalRecibidaD,
+        resultadoE,
+        resultadoF,
+        resultadoG,
+        totalUtilizadaH,
+        diferencia,
+        porcentajeDiferencia,
+        limitePermitido: 10,
         estadoMaterial,
       });
     }

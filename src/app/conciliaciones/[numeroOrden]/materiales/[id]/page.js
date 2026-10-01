@@ -10,12 +10,14 @@ import {
   calcularDiferenciaAH,
   calcularECajaPlegadiza,
   calcularECajaEmpaque,
+  calcularFCajaEmpaque,
   calcularEEtiquetaColectiva,
   calcularETableta,
   calcularFCajaPlegadiza,
   calcularFEtiquetaColectiva,
   calcularFTableta,
   calcularGCajaPlegadiza,
+  calcularGCajaEmpaque,
   calcularGEtiquetaColectiva,
   calcularGTableta,
   calcularPorcentajeDiferencia,
@@ -132,11 +134,12 @@ export default function MaterialCapturePage() {
   const isTablet = material?.descripcion === "TABLETA";
   const isCajaPlegadiza = material?.descripcion === "CAJA PLEGADIZA";
   const isEtiquetaColectiva = material?.descripcion === "ETIQUETA COLECTIVA";
+  const isCajaEmpaque = material?.descripcion === "CAJA EMPAQUE";
   const normalizedB = isTablet ? 0 : toNumber(values.cantidadAdicionalB);
   const normalizedC = isTablet ? 0 : toNumber(values.cantidadDevueltaC);
   const totalRecibidaD = isCajaPlegadiza
     ? calcularTotalRecibido(values.cantidadSurtidaA, values.cantidadAdicionalB, values.cantidadDevueltaC)
-    : isEtiquetaColectiva
+    : isEtiquetaColectiva || isCajaEmpaque
       ? calcularTotalRecibido(values.cantidadSurtidaA, values.cantidadAdicionalB, values.cantidadDevueltaC)
       : calcularTotalRecibido(values.cantidadSurtidaA, normalizedB, normalizedC);
   const tabletaResultadoE = isTablet
@@ -161,6 +164,11 @@ export default function MaterialCapturePage() {
   const etiquetaResultadoE = isEtiquetaColectiva
     ? calcularEEtiquetaColectiva(values.cantidadRealAcondicionada, values.capacidadCajaEmpaque)
     : null;
+  const empaqueResultadoE = isCajaEmpaque
+    ? calcularECajaEmpaque(values.cantidadRealAcondicionada, values.capacidadCajaEmpaque)
+    : null;
+  const empaqueResultadoF = isCajaEmpaque ? calcularFCajaEmpaque(values.otraMerma) : null;
+  const empaqueResultadoG = isCajaEmpaque ? calcularGCajaEmpaque(values.cajasTomadasMuestra) : null;
 
   const operacionEtiquetaE = (() => {
     if (!isEtiquetaColectiva) {
@@ -215,21 +223,27 @@ export default function MaterialCapturePage() {
       ? cajaResultadoE
       : isEtiquetaColectiva
         ? etiquetaResultadoE
-        : values.resultadoE;
+        : isCajaEmpaque
+          ? empaqueResultadoE
+          : values.resultadoE;
   const resultadoFVisible = isTablet
     ? tabletaResultadoF
     : isCajaPlegadiza
       ? cajaResultadoF
       : isEtiquetaColectiva
         ? etiquetaResultadoF
-        : values.resultadoF;
+        : isCajaEmpaque
+          ? empaqueResultadoF
+          : values.resultadoF;
   const resultadoGVisible = isTablet
     ? tabletaResultadoG
     : isCajaPlegadiza
       ? cajaResultadoG
       : isEtiquetaColectiva
         ? etiquetaResultadoG
-        : values.resultadoG;
+        : isCajaEmpaque
+          ? empaqueResultadoG
+          : values.resultadoG;
   const requiresCalculation = calculatedMaterialTypes.includes(material?.descripcion);
   const formulaD = "D = A + B - C";
   const formulaE = material?.descripcion === "CAJA PLEGADIZA"
@@ -239,7 +253,7 @@ export default function MaterialCapturePage() {
       : material?.descripcion === "ETIQUETA COLECTIVA"
         ? "E = CEIL(cantidad real acondicionada / capacidad)"
         : material?.descripcion === "CAJA EMPAQUE"
-          ? "E = cantidad real acondicionada / capacidad"
+          ? "E = CEIL(cantidad real acondicionada / capacidad)"
           : "E = cálculo manual";
   const totalUtilizadaH = calcularTotalUtilizadoAH(resultadoEVisible, resultadoFVisible, resultadoGVisible);
   const diferencia = calcularDiferenciaAH(totalRecibidaD, totalUtilizadaH);
@@ -268,6 +282,25 @@ export default function MaterialCapturePage() {
     : Math.abs(diferencia) <= 10
       ? "DENTRO_DEL_LIMITE"
       : "FUERA_DEL_LIMITE";
+  const empaqueFaltanValores = [totalRecibidaD, empaqueResultadoE, empaqueResultadoF, empaqueResultadoG, totalUtilizadaH, diferencia]
+    .some((value) => value === null);
+  const empaqueEstado = empaqueFaltanValores
+    ? "CAPTURA_INCOMPLETA"
+    : Math.abs(diferencia) <= 10
+      ? "DENTRO_DEL_LIMITE"
+      : "FUERA_DEL_LIMITE";
+  const operacionCajaEmpaque = (() => {
+    if (!isCajaEmpaque) return "";
+    const cantidad = values.cantidadRealAcondicionada;
+    const capacidad = values.capacidadCajaEmpaque;
+    if (cantidad === "" || cantidad === null || cantidad === undefined || capacidad === "" || capacidad === null || capacidad === undefined) {
+      return "Pendiente de completar datos";
+    }
+    if (Number(capacidad) <= 0) return "La capacidad debe ser mayor que cero";
+
+    const division = Number(cantidad) / Number(capacidad);
+    return `${Number(cantidad).toLocaleString("es-MX")} / ${Number(capacidad).toLocaleString("es-MX")} = ${division.toFixed(2)} | Redondeo físico: ${empaqueResultadoE} PZA`;
+  })();
 
   function updateValue(field, value) {
     if (isTablet && (field === "cantidadAdicionalB" || field === "cantidadDevueltaC")) {
@@ -303,12 +336,12 @@ export default function MaterialCapturePage() {
       }
       resultadoE = calcularEEtiquetaColectiva(values.cantidadRealAcondicionada, capacidad);
     } else if (material.descripcion === "CAJA EMPAQUE") {
-      const capacidad = toNumber(values.blisterPorCaja);
+      const capacidad = toNumber(values.capacidadCajaEmpaque);
       if (capacidad <= 0) {
-        setError("Indica la capacidad de cajas plegadizas.");
+        setError("La capacidad debe ser mayor que cero.");
         return;
       }
-      resultadoE = calcularECajaEmpaque(values.cantidadSurtidaA, capacidad).total;
+      resultadoE = calcularECajaEmpaque(values.cantidadRealAcondicionada, capacidad);
     } else {
       setError("Este material aún usa captura manual de E.");
       return;
@@ -324,7 +357,7 @@ export default function MaterialCapturePage() {
     setError("");
 
     try {
-      const payload = isEtiquetaColectiva
+      const payload = isCajaEmpaque
         ? {
           cantidadSurtidaA: parseNumeroOpcional(values.cantidadSurtidaA),
           cantidadAdicionalB: parseNumeroOpcional(values.cantidadAdicionalB),
@@ -334,22 +367,32 @@ export default function MaterialCapturePage() {
           otraMerma: parseNumeroOpcional(values.otraMerma),
           cajasTomadasMuestra: parseNumeroOpcional(values.cajasTomadasMuestra),
         }
-        : {
-          ...values,
-          cantidadAdicionalB: isTablet ? 0 : parseNumeroOpcional(values.cantidadAdicionalB),
-          cantidadDevueltaC: isTablet ? 0 : parseNumeroOpcional(values.cantidadDevueltaC),
+        : isEtiquetaColectiva
+          ? {
           cantidadSurtidaA: parseNumeroOpcional(values.cantidadSurtidaA),
+          cantidadAdicionalB: parseNumeroOpcional(values.cantidadAdicionalB),
+          cantidadDevueltaC: parseNumeroOpcional(values.cantidadDevueltaC),
           cantidadRealAcondicionada: parseNumeroOpcional(values.cantidadRealAcondicionada),
-          tabletasPorBlister: parseNumeroOpcional(values.tabletasPorBlister),
-          blisterPorCaja: parseNumeroOpcional(values.blisterPorCaja),
-          resultadoE: requiresCalculation ? parseNumeroOpcional(values.resultadoE) : null,
-          resultadoF: parseNumeroOpcional(values.resultadoF),
-          resultadoG: parseNumeroOpcional(values.resultadoG),
-          totalRecibidaD: hasCantidadSurtida ? totalRecibidaD : null,
-          totalUtilizadaH: hasResultados ? totalUtilizadaH : null,
-          diferencia: hasCantidadSurtida && hasResultados ? diferencia : null,
-          porcentajeDiferencia: hasCantidadSurtida && hasResultados ? porcentajeDiferencia : null,
-        };
+          capacidadCajaEmpaque: parseNumeroOpcional(values.capacidadCajaEmpaque),
+          otraMerma: parseNumeroOpcional(values.otraMerma),
+          cajasTomadasMuestra: parseNumeroOpcional(values.cajasTomadasMuestra),
+        }
+          : {
+            ...values,
+            cantidadAdicionalB: isTablet ? 0 : parseNumeroOpcional(values.cantidadAdicionalB),
+            cantidadDevueltaC: isTablet ? 0 : parseNumeroOpcional(values.cantidadDevueltaC),
+            cantidadSurtidaA: parseNumeroOpcional(values.cantidadSurtidaA),
+            cantidadRealAcondicionada: parseNumeroOpcional(values.cantidadRealAcondicionada),
+            tabletasPorBlister: parseNumeroOpcional(values.tabletasPorBlister),
+            blisterPorCaja: parseNumeroOpcional(values.blisterPorCaja),
+            resultadoE: requiresCalculation ? parseNumeroOpcional(values.resultadoE) : null,
+            resultadoF: parseNumeroOpcional(values.resultadoF),
+            resultadoG: parseNumeroOpcional(values.resultadoG),
+            totalRecibidaD: hasCantidadSurtida ? totalRecibidaD : null,
+            totalUtilizadaH: hasResultados ? totalUtilizadaH : null,
+            diferencia: hasCantidadSurtida && hasResultados ? diferencia : null,
+            porcentajeDiferencia: hasCantidadSurtida && hasResultados ? porcentajeDiferencia : null,
+          };
 
       if (isTablet) {
         payload.resultadoE = tabletaResultadoE;
@@ -403,6 +446,26 @@ export default function MaterialCapturePage() {
       diferencia={diferenciaVisible}
       porcentaje={porcentajeDiferenciaTexto}
       status={cajaEstado}
+      error={error}
+      saving={saving}
+      onSubmit={handleSubmit}
+    />;
+  }
+  if (isCajaEmpaque) {
+    return <CajaEmpaqueCaptureForm
+      material={material}
+      numeroOrden={numeroOrden}
+      values={values}
+      updateValue={updateValue}
+      totalRecibida={totalRecibidaVisible}
+      resultadoE={empaqueResultadoE}
+      operacionE={operacionCajaEmpaque}
+      resultadoF={empaqueResultadoF}
+      resultadoG={empaqueResultadoG}
+      totalUtilizada={totalUtilizadaVisible}
+      diferencia={diferenciaVisible}
+      porcentaje={porcentajeDiferenciaTexto}
+      status={empaqueEstado}
       error={error}
       saving={saving}
       onSubmit={handleSubmit}
@@ -717,6 +780,28 @@ export default function MaterialCapturePage() {
     </main>
   </div>
 );
+}
+
+function CajaEmpaqueCaptureForm({ material, numeroOrden, values, updateValue, totalRecibida, resultadoE, operacionE, resultadoF, resultadoG, totalUtilizada, diferencia, porcentaje, status, error, saving, onSubmit }) {
+  const display = (value) => value ?? "";
+  const formatNumber = (value) => new Intl.NumberFormat("es-MX", { maximumFractionDigits: 3 }).format(Number(value));
+  const result = (value) => value === null || value === undefined || value === ""
+    ? "Pendiente"
+    : `${formatNumber(value)} PZA`;
+  const safeStatus = status || "CAPTURA_INCOMPLETA";
+  const friendlyStatus = {
+    CAPTURA_INCOMPLETA: "Captura incompleta",
+    DENTRO_DEL_LIMITE: "Dentro del límite",
+    FUERA_DEL_LIMITE: "Fuera del límite",
+    PENDIENTE_DE_REVISION: "Pendiente de revisión",
+  }[safeStatus] || "Captura incompleta";
+  const porcentajeVisible = porcentaje === ""
+    ? "Pendiente"
+    : porcentaje === "No calculable"
+      ? porcentaje
+      : `${Number(porcentaje).toFixed(2)} %`;
+
+  return <div className="app-shell"><Sidebar activeView="inicio" /><main className="main-content"><Header title={`Material: ${material.descripcion}`} description={`Orden ${numeroOrden}`} /><form className="card material-capture-card" onSubmit={onSubmit}><div className="section-heading"><div><h2>Captura de CAJA EMPAQUE</h2><p>{material.codigoSAP} · {material.unidadMedida}</p></div><span className={`status-badge status-${safeStatus.toLowerCase()}`}>{friendlyStatus}</span></div><div className="capture-grid"><h3 className="capture-section-title">Cantidad recibida</h3><label>A. Cantidad surtida<input type="number" min="0" step="any" value={display(values.cantidadSurtidaA)} onChange={(event) => updateValue("cantidadSurtidaA", event.target.value)} /></label><label>B. Cantidad adicional<input type="number" min="0" step="any" value={display(values.cantidadAdicionalB)} onChange={(event) => updateValue("cantidadAdicionalB", event.target.value)} /></label><label>C. Cantidad devuelta<input type="number" min="0" step="any" value={display(values.cantidadDevueltaC)} onChange={(event) => updateValue("cantidadDevueltaC", event.target.value)} /></label><label>D. Total recibida<input className="calculated-field" type="text" value={result(totalRecibida)} readOnly /></label><h3 className="capture-section-title">Cantidad utilizada E</h3><label>Cantidad real acondicionada<input type="number" min="0" step="any" value={display(values.cantidadRealAcondicionada)} onChange={(event) => updateValue("cantidadRealAcondicionada", event.target.value)} /><small>PZA</small></label><label>Capacidad de cajas plegadizas por caja de empaque<input type="number" min="0" step="any" value={display(values.capacidadCajaEmpaque)} onChange={(event) => updateValue("capacidadCajaEmpaque", event.target.value)} /><small>PZA/caja</small></label><label>Operación de E<input className="calculated-field" value={operacionE} readOnly /></label><label>E. Cantidad utilizada<input className="calculated-field" type="text" value={result(resultadoE)} readOnly /></label><h3 className="capture-section-title">Merma F</h3><label>Merma registrada en la MBR<input type="number" min="0" step="any" value={display(values.otraMerma)} onChange={(event) => updateValue("otraMerma", event.target.value)} /><small>PZA</small></label><label>F. Merma total<input className="calculated-field" type="text" value={result(resultadoF)} readOnly /></label><h3 className="capture-section-title">Muestra G</h3><label>Cajas de empaque tomadas como muestra<input type="number" min="0" step="any" value={display(values.cajasTomadasMuestra)} onChange={(event) => updateValue("cajasTomadasMuestra", event.target.value)} /><small>PZA</small></label><label>G. Cantidad de muestra<input className="calculated-field" type="text" value={result(resultadoG)} readOnly /></label><h3 className="capture-section-title">Resultado final</h3><label>H. Total utilizada<input className="calculated-field" type="text" value={result(totalUtilizada)} readOnly /></label><label>Diferencia<input className="calculated-field" type="text" value={result(diferencia)} readOnly /></label><label>Porcentaje informativo<input className="calculated-field" type="text" value={porcentajeVisible} readOnly /></label><label>Límite permitido<input className="calculated-field" type="text" value="± 10 PZA" readOnly /></label><label>Estado<input className="calculated-field" type="text" value={friendlyStatus} readOnly /></label></div>{error && <p className="field-error">{error}</p>}<div className="button-row"><button className="button primary" type="submit" disabled={saving}>{saving ? "Guardando..." : "Guardar captura"}</button><Link className="button secondary" href={`/conciliaciones/${numeroOrden}`}>Cancelar</Link></div></form></main></div>;
 }
 
 function CajaPlegadizaCaptureForm({ material, numeroOrden, values, updateValue, totalRecibida, resultadoE, resultadoF, resultadoG, totalUtilizada, diferencia, porcentaje, status, error, saving, onSubmit }) {

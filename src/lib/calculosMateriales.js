@@ -63,12 +63,28 @@ export function calcularGEtiquetaColectiva(cajasTomadasMuestra) {
 }
 
 export function calcularECajaEmpaque(cantidadRealAcondicionada, capacidad) {
-  const capacidadValida = toSafeNumber(capacidad);
-  if (capacidadValida <= 0) return { completas: 0, parcial: 0, total: 0 };
-  const total = toSafeNumber(cantidadRealAcondicionada);
-  const completas = Math.floor(total / capacidadValida);
-  const parcial = total % capacidadValida === 0 ? 0 : 1;
-  return { completas, parcial, total: completas + parcial };
+  if (isEmptyValue(cantidadRealAcondicionada) || isEmptyValue(capacidad)) return null;
+
+  const cantidad = Number(cantidadRealAcondicionada);
+  const capacidadCaja = Number(capacidad);
+
+  if (!Number.isFinite(cantidad) || !Number.isFinite(capacidadCaja) || cantidad < 0 || capacidadCaja <= 0) {
+    return null;
+  }
+
+  return Math.ceil(cantidad / capacidadCaja);
+}
+
+export function calcularFCajaEmpaque(mermaRegistrada) {
+  if (isEmptyValue(mermaRegistrada)) return null;
+  const merma = Number(mermaRegistrada);
+  return Number.isFinite(merma) && merma >= 0 ? merma : null;
+}
+
+export function calcularGCajaEmpaque(cajasTomadasMuestra) {
+  if (isEmptyValue(cajasTomadasMuestra)) return null;
+  const muestra = Number(cajasTomadasMuestra);
+  return Number.isFinite(muestra) && muestra >= 0 ? muestra : null;
 }
 
 export function calcularFTableta(input, hermeticidad, otraMerma, tabletasPorBlister) {
@@ -90,7 +106,8 @@ export function evaluarEstadoMaterial({ tipoMaterial, d, diferencia, porcentaje,
   if (tipoMaterial === "FOIL PVC") return { estado: toSafeNumber(porcentaje) <= 7 ? "DENTRO_DEL_LIMITE" : "FUERA_DEL_LIMITE" };
   if (tipoMaterial === "TABLETA") return { estado: "PENDIENTE_DE_REVISION" };
   if (tipoMaterial === "CAJA PLEGADIZA") return { estado: Math.abs(toSafeNumber(diferencia)) <= toSafeNumber(d) * 0.01 ? "DENTRO_DEL_LIMITE" : "FUERA_DEL_LIMITE" };
-  if (tipoMaterial === "CAJA EMPAQUE" || tipoMaterial === "ETIQUETA COLECTIVA") return { estado: Math.abs(toSafeNumber(diferencia)) <= 10 ? "DENTRO_DEL_LIMITE" : "FUERA_DEL_LIMITE" };
+  if (tipoMaterial === "CAJA EMPAQUE") return { estado: Math.abs(Number(diferencia)) <= 10 ? "DENTRO_DEL_LIMITE" : "FUERA_DEL_LIMITE" };
+  if (tipoMaterial === "ETIQUETA COLECTIVA") return { estado: Math.abs(toSafeNumber(diferencia)) <= 10 ? "DENTRO_DEL_LIMITE" : "FUERA_DEL_LIMITE" };
   if (tipoMaterial === "INSTRUCTIVO" || tipoMaterial === "SELLO GARANTÍA") {
     const max = toSafeNumber(d) * (tipoMaterial === "INSTRUCTIVO" ? 0.01 : 0.07);
     return { estado: Math.abs(toSafeNumber(diferencia)) <= max ? "DENTRO_DEL_LIMITE" : "FUERA_DEL_LIMITE" };

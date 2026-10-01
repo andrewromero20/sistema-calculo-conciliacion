@@ -7,6 +7,8 @@ import {
   calcularECajaPlegadiza,
   calcularFCajaPlegadiza,
   calcularGCajaPlegadiza,
+  calcularFCajaEmpaque,
+  calcularGCajaEmpaque,
   calcularEEtiquetaColectiva,
   calcularECajaEmpaque,
   calcularFTableta,
@@ -116,6 +118,8 @@ test('ETIQUETA COLECTIVA: D, E, F, G y H se calculan con la fórmula esperada', 
   assert.equal(h, 893);
   assert.equal(diferencia, 0);
   assert.equal(porcentaje, 0);
+  assert.equal(calcularPorcentajeDiferencia(900, 8), 0.89);
+  assert.equal(calcularPorcentajeDiferencia(0, 0), null);
   assert.equal(evaluarEstadoMaterial({ tipoMaterial: 'ETIQUETA COLECTIVA', d, diferencia, porcentaje, faltanValores: false }).estado, 'DENTRO_DEL_LIMITE');
 });
 
@@ -131,11 +135,50 @@ test('ETIQUETA COLECTIVA: F y G aceptan valores pendientes y cero', () => {
   assert.equal(evaluarEstadoMaterial({ tipoMaterial: 'ETIQUETA COLECTIVA', d: 900, diferencia: 11, porcentaje: 1.22, faltanValores: false }).estado, 'FUERA_DEL_LIMITE');
 });
 
-test('CAJA EMPAQUE: redondea hacia arriba y entrega desglose de completas y parcial', () => {
-  const result = calcularECajaEmpaque(70656, 80);
-  assert.equal(result.total, 884);
-  assert.equal(result.completas, 883);
-  assert.equal(result.parcial, 1);
+test('CAJA EMPAQUE: calcula el caso principal y usa diferencia absoluta para el límite', () => {
+  const d = calcularTotalRecibido(883, 10, 0);
+  const e = calcularECajaEmpaque(70656, 80);
+  const f = calcularFCajaEmpaque(8);
+  const g = calcularGCajaEmpaque(1);
+  const h = calcularTotalUtilizado(e, f, g);
+  const diferencia = calcularDiferencia(d, h);
+  const porcentaje = calcularPorcentaje(diferencia, d);
+
+  assert.equal(d, 893);
+  assert.equal(e, 884);
+  assert.equal(f, 8);
+  assert.equal(g, 1);
+  assert.equal(h, 893);
+  assert.equal(diferencia, 0);
+  assert.equal(porcentaje, 0);
+  assert.equal(evaluarEstadoMaterial({ tipoMaterial: 'CAJA EMPAQUE', d, diferencia, porcentaje, faltanValores: false }).estado, 'DENTRO_DEL_LIMITE');
+});
+
+test('CAJA EMPAQUE: E redondea fracciones, conserva divisiones exactas y rechaza capacidad cero', () => {
+  assert.equal(calcularECajaEmpaque(70656, 80), 884);
+  assert.equal(calcularECajaEmpaque(70400, 80), 880);
+  assert.equal(calcularECajaEmpaque(0, 80), 0);
+  assert.equal(calcularECajaEmpaque(70656, 0), null);
+  assert.equal(calcularECajaEmpaque(70656, -1), null);
+  assert.equal(calcularECajaEmpaque(null, 80), null);
+  assert.equal(evaluarEstadoMaterial({ tipoMaterial: 'CAJA EMPAQUE', d: 893, diferencia: null, faltanValores: true }).estado, 'CAPTURA_INCOMPLETA');
+});
+
+test('CAJA EMPAQUE: F y G conservan pendientes y cero confirmado', () => {
+  assert.equal(calcularFCajaEmpaque(8), 8);
+  assert.equal(calcularFCajaEmpaque(0), 0);
+  assert.equal(calcularFCajaEmpaque(null), null);
+  assert.equal(calcularGCajaEmpaque(1), 1);
+  assert.equal(calcularGCajaEmpaque(0), 0);
+  assert.equal(calcularGCajaEmpaque(null), null);
+});
+
+test('CAJA EMPAQUE: estado por diferencia absoluta incluye límite y diferencia negativa', () => {
+  assert.equal(evaluarEstadoMaterial({ tipoMaterial: 'CAJA EMPAQUE', d: 900, diferencia: 7, porcentaje: 0.78, faltanValores: false }).estado, 'DENTRO_DEL_LIMITE');
+  assert.equal(evaluarEstadoMaterial({ tipoMaterial: 'CAJA EMPAQUE', d: 900, diferencia: 10, porcentaje: 1.11, faltanValores: false }).estado, 'DENTRO_DEL_LIMITE');
+  assert.equal(evaluarEstadoMaterial({ tipoMaterial: 'CAJA EMPAQUE', d: 900, diferencia: 11, porcentaje: 1.22, faltanValores: false }).estado, 'FUERA_DEL_LIMITE');
+  assert.equal(evaluarEstadoMaterial({ tipoMaterial: 'CAJA EMPAQUE', d: 900, diferencia: -11, porcentaje: 1.22, faltanValores: false }).estado, 'FUERA_DEL_LIMITE');
+  assert.equal(evaluarEstadoMaterial({ tipoMaterial: 'CAJA EMPAQUE', d: 900, diferencia: null, porcentaje: null, faltanValores: true }).estado, 'CAPTURA_INCOMPLETA');
 });
 
 test('FOIL PVC: G no se duplica y la diferencia usa D - E - F', () => {

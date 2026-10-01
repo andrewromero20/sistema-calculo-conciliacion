@@ -3,7 +3,6 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Icon from "../ui/Icon";
-import StatusBadge from "../ui/StatusBadge";
 import {
   actualizarMaterial,
   crearMaterial,
@@ -152,7 +151,35 @@ export default function MaterialsSection({ numeroOrden, conciliacionId, material
     }
   }
 
+  function formatQuantity(value) {
+    if (value === null || value === undefined) return "Pendiente";
+    return new Intl.NumberFormat("en-US", { maximumFractionDigits: 3 }).format(value);
+  }
+
+  function formatPercentage(value) {
+    if (value === null || value === undefined) return "Pendiente";
+    return `${Number(value).toFixed(2)}%`;
+  }
+
+  function formatLimit(material) {
+    if (material.limitePermitido === null || material.limitePermitido === undefined) return "Pendiente";
+    const suffix = material.descripcion === "CAJA PLEGADIZA" ? "%" : " PZA";
+    return `${formatQuantity(material.limitePermitido)}${suffix}`;
+  }
+
+  function friendlyStatus(status) {
+    const labels = {
+      CAPTURA_INCOMPLETA: "Captura incompleta",
+      DENTRO_DEL_LIMITE: "Dentro del límite",
+      FUERA_DEL_LIMITE: "Fuera del límite",
+      PENDIENTE_DE_REVISION: "Pendiente de revisión",
+      PENDIENTE: "Pendiente",
+      "En captura": "En captura",
+    };
+    return labels[status] || status || "Pendiente";
+  }
+
   const form = <form className="material-form" onSubmit={editingMaterial ? handleEditMaterial : handleAddMaterial}><label htmlFor="material-description">Descripción</label><select id="material-description" value={description} onChange={(event) => setDescription(event.target.value)}><option value="">Selecciona un tipo de material</option>{materialTypes.map((type) => <option key={type} value={type}>{type}</option>)}</select><label htmlFor="material-sap-code">Código SAP</label><input id="material-sap-code" value={sapCode} onChange={(event) => setSapCode(event.target.value)} placeholder="Ej. 10002345" /><label htmlFor="material-unit">Unidad</label><input id="material-unit" value={unit} onChange={(event) => setUnit(event.target.value)} placeholder="Ej. PZA" />{error && <p className="field-error">{error}</p>}<div className="button-row"><button className="button primary" type="submit"><Icon name={editingMaterial ? "edit" : "plus"} size={17} />{editingMaterial ? "Guardar cambios" : "Guardar material"}</button><button className="button secondary" type="button" onClick={editingMaterial ? cancelEditing : () => { setIsAdding(false); setError(""); }}>Cancelar</button></div></form>;
 
-  return <section className="card materials-card"><div className="section-heading"><div><h2>Materiales</h2><p>Materiales asociados a esta conciliación.</p></div><span className="recent-count">{materialList.length} registros</span></div><div className="materials-list"><div className="material-row material-header"><span>Descripción</span><span>SAP</span><span>Unidad</span><span>Estado</span><span>Acciones</span></div>{materialList.length === 0 ? <p className="materials-empty">Aún no hay materiales agregados.</p> : materialList.map((material) => <div className="material-row" key={material.id}><strong>{material.descripcion}</strong><span>{material.codigoSAP}</span><span>{material.unidadMedida}</span><span><StatusBadge status={material.estadoMaterial} /></span><span className="material-actions"><button className="icon-button" type="button" onClick={() => startEditing(material)} title={`Editar ${material.descripcion}`}><Icon name="edit" size={16} /></button><button className="icon-button danger" type="button" onClick={() => handleDeleteMaterial(material)} title={`Eliminar ${material.descripcion}`}><Icon name="trash" size={16} /></button></span></div>)}</div>{editingMaterial ? form : isAdding ? form : <button className="button secondary materials-add-button" type="button" onClick={() => { setIsAdding(true); setError(""); }}><Icon name="plus" size={17} />Agregar material</button>}</section>;
+  return <section className="card materials-card"><div className="section-heading"><div><h2>Materiales</h2><p>Materiales asociados a esta conciliación.</p></div><span className="recent-count">{materialList.length} registros</span></div><div className="materials-table-wrap"><table className="materials-summary-table"><thead><tr><th className="material-sticky-column">Material</th><th>SAP</th><th>Unidad</th><th className="quantity-header">A</th><th className="quantity-header">B</th><th className="quantity-header">C</th><th className="quantity-header">D</th><th className="usage-header">E</th><th className="usage-header">F</th><th className="usage-header">G</th><th className="usage-header">H</th><th className="difference-header">Diferencia D - H</th><th>Porcentaje sobre D</th><th>Límite permitido</th><th>Estado</th><th>Acciones</th></tr></thead><tbody>{materialList.length === 0 ? <tr><td className="materials-empty-cell" colSpan={16}>Aún no hay materiales agregados.</td></tr> : materialList.map((material) => <tr key={material.id}><th scope="row" className="material-sticky-column material-name">{material.descripcion}</th><td>{material.codigoSAP}</td><td>{material.unidadMedida}</td><td>{formatQuantity(material.cantidadSurtidaA)}</td><td>{formatQuantity(material.cantidadAdicionalB)}</td><td>{formatQuantity(material.cantidadDevueltaC)}</td><td className="calculated-summary-cell">{formatQuantity(material.totalRecibidaD)}</td><td>{formatQuantity(material.resultadoE)}</td><td>{formatQuantity(material.resultadoF)}</td><td>{formatQuantity(material.resultadoG)}</td><td className="calculated-summary-cell">{formatQuantity(material.totalUtilizadaH)}</td><td className="difference-cell">{formatQuantity(material.diferencia)}</td><td>{formatPercentage(material.porcentajeDiferencia)}</td><td>{formatLimit(material)}</td><td><span className={`status-badge material-status-${String(material.estadoMaterial || "pendiente").toLowerCase().replaceAll("_", "-").replaceAll(" ", "-")}`}>{friendlyStatus(material.estadoMaterial)}</span></td><td><span className="material-actions"><button className="icon-button" type="button" onClick={() => startEditing(material)} title={`Editar ${material.descripcion}`}><Icon name="edit" size={16} /></button><button className="icon-button danger" type="button" onClick={() => handleDeleteMaterial(material)} title={`Eliminar ${material.descripcion}`}><Icon name="trash" size={16} /></button></span></td></tr>)}</tbody></table></div>{editingMaterial ? form : isAdding ? form : <button className="button secondary materials-add-button" type="button" onClick={() => { setIsAdding(true); setError(""); }}><Icon name="plus" size={17} />Agregar material</button>}</section>;
 }

@@ -163,6 +163,9 @@ export default function MaterialsSection({ numeroOrden, conciliacionId, material
 
   function formatLimit(material) {
     if (material.limitePermitido === null || material.limitePermitido === undefined) return "Pendiente";
+    if (material.descripcion === "INSTRUCTIVO") {
+      return `± ${Number(material.limitePermitido).toFixed(2)} %`;
+    }
     const suffix = material.descripcion === "CAJA PLEGADIZA" ? "%" : " PZA";
     return `${formatQuantity(material.limitePermitido)}${suffix}`;
   }

@@ -9,6 +9,9 @@ import {
   calcularGCajaPlegadiza,
   calcularFCajaEmpaque,
   calcularGCajaEmpaque,
+  calcularEInstructivo,
+  calcularFInstructivo,
+  calcularGInstructivo,
   calcularEEtiquetaColectiva,
   calcularECajaEmpaque,
   calcularFTableta,
@@ -179,6 +182,50 @@ test('CAJA EMPAQUE: estado por diferencia absoluta incluye límite y diferencia 
   assert.equal(evaluarEstadoMaterial({ tipoMaterial: 'CAJA EMPAQUE', d: 900, diferencia: 11, porcentaje: 1.22, faltanValores: false }).estado, 'FUERA_DEL_LIMITE');
   assert.equal(evaluarEstadoMaterial({ tipoMaterial: 'CAJA EMPAQUE', d: 900, diferencia: -11, porcentaje: 1.22, faltanValores: false }).estado, 'FUERA_DEL_LIMITE');
   assert.equal(evaluarEstadoMaterial({ tipoMaterial: 'CAJA EMPAQUE', d: 900, diferencia: null, porcentaje: null, faltanValores: true }).estado, 'CAPTURA_INCOMPLETA');
+});
+
+test('INSTRUCTIVO: E, F y G son entradas MBR manuales con null, cero y positivos', () => {
+  assert.equal(calcularEInstructivo(null), null);
+  assert.equal(calcularEInstructivo(0), 0);
+  assert.equal(calcularEInstructivo(9950), 9950);
+  assert.equal(calcularEInstructivo(-1), null);
+  assert.equal(calcularFInstructivo(null), null);
+  assert.equal(calcularFInstructivo(0), 0);
+  assert.equal(calcularFInstructivo(80), 80);
+  assert.equal(calcularFInstructivo(-1), null);
+  assert.equal(calcularGInstructivo(null), null);
+  assert.equal(calcularGInstructivo(0), 0);
+  assert.equal(calcularGInstructivo(20), 20);
+  assert.equal(calcularGInstructivo(-1), null);
+});
+
+test('INSTRUCTIVO: calcula resumen y conserva el signo de diferencia', () => {
+  const d = calcularTotalRecibido(10000, 100, 50);
+  const e = calcularEInstructivo(9950);
+  const f = calcularFInstructivo(80);
+  const g = calcularGInstructivo(20);
+  const h = calcularTotalUtilizadoAH(e, f, g);
+  const difference = calcularDiferenciaAH(d, h);
+  const percentage = calcularPorcentajeDiferencia(d, difference);
+
+  assert.equal(d, 10050);
+  assert.equal(h, 10050);
+  assert.equal(difference, 0);
+  assert.equal(percentage, 0);
+  assert.equal(evaluarEstadoMaterial({ tipoMaterial: 'INSTRUCTIVO', d, diferencia: difference, porcentaje: percentage, faltanValores: false }).estado, 'DENTRO_DEL_LIMITE');
+  assert.equal(calcularDiferenciaAH(10000, 10101), -101);
+  assert.equal(calcularPorcentajeDiferencia(10000, -101), 1.01);
+});
+
+test('INSTRUCTIVO: límite 1%, D cero y captura incompleta', () => {
+  assert.equal(evaluarEstadoMaterial({ tipoMaterial: 'INSTRUCTIVO', d: 10000, diferencia: 100, porcentaje: 1, faltanValores: false }).estado, 'DENTRO_DEL_LIMITE');
+  assert.equal(evaluarEstadoMaterial({ tipoMaterial: 'INSTRUCTIVO', d: 10000, diferencia: 101, porcentaje: 1.01, faltanValores: false }).estado, 'FUERA_DEL_LIMITE');
+  assert.equal(evaluarEstadoMaterial({ tipoMaterial: 'INSTRUCTIVO', d: 10000, diferencia: -101, porcentaje: 1.01, faltanValores: false }).estado, 'FUERA_DEL_LIMITE');
+  assert.equal(calcularPorcentajeDiferencia(0, 0), null);
+  assert.equal(evaluarEstadoMaterial({ tipoMaterial: 'INSTRUCTIVO', d: 0, diferencia: 0, porcentaje: null, faltanValores: false }).estado, 'PENDIENTE_DE_REVISION');
+  assert.equal(evaluarEstadoMaterial({ tipoMaterial: 'INSTRUCTIVO', d: -1, diferencia: 0, porcentaje: null, faltanValores: false }).estado, 'PENDIENTE_DE_REVISION');
+  assert.equal(evaluarEstadoMaterial({ tipoMaterial: 'INSTRUCTIVO', d: null, diferencia: null, porcentaje: null, faltanValores: true }).estado, 'CAPTURA_INCOMPLETA');
+  assert.equal(calcularTotalUtilizadoAH(9950, null, 20), null);
 });
 
 test('FOIL PVC: G no se duplica y la diferencia usa D - E - F', () => {

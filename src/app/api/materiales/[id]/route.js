@@ -7,6 +7,9 @@ import {
   calcularFCajaEmpaque,
   calcularGCajaPlegadiza,
   calcularGCajaEmpaque,
+  calcularEInstructivo,
+  calcularFInstructivo,
+  calcularGInstructivo,
   calcularETableta,
   calcularEEtiquetaColectiva,
   calcularFTableta,
@@ -185,6 +188,22 @@ export async function PUT(request, { params }) {
       return Response.json({ error: "Material no encontrado." }, { status: 404 });
     }
 
+    if (currentMaterial.descripcion === "INSTRUCTIVO") {
+      const negativeInstructivoFields = ["resultadoE", "resultadoF", "resultadoG"].filter((field) =>
+        data[field] !== undefined && data[field] !== null && data[field] < 0,
+      );
+
+      if (negativeInstructivoFields.length > 0) {
+        return Response.json(
+          {
+            error: "Las cantidades no pueden ser negativas.",
+            campos: negativeInstructivoFields,
+          },
+          { status: 400 },
+        );
+      }
+    }
+
     const nextData = { ...currentMaterial, ...data };
 
     if (nextData.descripcion === "TABLETA") {
@@ -357,6 +376,47 @@ export async function PUT(request, { params }) {
         diferencia,
         porcentajeDiferencia,
         limitePermitido: 10,
+        estadoMaterial,
+      });
+    }
+
+    if (nextData.descripcion === "INSTRUCTIVO") {
+      const totalRecibidaD = calcularTotalRecibido(
+        nextData.cantidadSurtidaA,
+        nextData.cantidadAdicionalB,
+        nextData.cantidadDevueltaC,
+      );
+      const resultadoE = calcularEInstructivo(nextData.resultadoE);
+      const resultadoF = calcularFInstructivo(nextData.resultadoF);
+      const resultadoG = calcularGInstructivo(nextData.resultadoG);
+      const totalUtilizadaH = calcularTotalUtilizadoAH(resultadoE, resultadoF, resultadoG);
+      const diferencia = calcularDiferenciaAH(totalRecibidaD, totalUtilizadaH);
+      const porcentajeDiferencia = calcularPorcentajeDiferencia(totalRecibidaD, diferencia);
+      const faltanValores = [
+        totalRecibidaD,
+        resultadoE,
+        resultadoF,
+        resultadoG,
+        totalUtilizadaH,
+        diferencia,
+      ].some((value) => value === null);
+      const estadoMaterial = faltanValores
+        ? "CAPTURA_INCOMPLETA"
+        : totalRecibidaD <= 0
+          ? "PENDIENTE_DE_REVISION"
+          : porcentajeDiferencia <= 1
+            ? "DENTRO_DEL_LIMITE"
+            : "FUERA_DEL_LIMITE";
+
+      Object.assign(data, {
+        totalRecibidaD,
+        resultadoE,
+        resultadoF,
+        resultadoG,
+        totalUtilizadaH,
+        diferencia,
+        porcentajeDiferencia,
+        limitePermitido: 1,
         estadoMaterial,
       });
     }

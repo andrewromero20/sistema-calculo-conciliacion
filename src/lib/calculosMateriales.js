@@ -100,6 +100,24 @@ export function calcularGTableta(cajasMuestra, tabletasPorBlister) {
   return Math.round(toSafeNumber(cajasMuestra) * toSafeNumber(tabletasPorBlister));
 }
 
+export function calcularEInstructivo(valorUtilizado) {
+  if (isEmptyValue(valorUtilizado)) return null;
+  const value = Number(valorUtilizado);
+  return Number.isFinite(value) && value >= 0 ? value : null;
+}
+
+export function calcularFInstructivo(valorMerma) {
+  if (isEmptyValue(valorMerma)) return null;
+  const value = Number(valorMerma);
+  return Number.isFinite(value) && value >= 0 ? value : null;
+}
+
+export function calcularGInstructivo(valorMuestra) {
+  if (isEmptyValue(valorMuestra)) return null;
+  const value = Number(valorMuestra);
+  return Number.isFinite(value) && value >= 0 ? value : null;
+}
+
 export function evaluarEstadoMaterial({ tipoMaterial, d, diferencia, porcentaje, faltanValores }) {
   if (faltanValores) return { estado: "CAPTURA_INCOMPLETA" };
   if (tipoMaterial === "FOIL ALUMINIO") return { estado: Math.abs(toSafeNumber(diferencia)) <= 2 ? "DENTRO_DEL_LIMITE" : "FUERA_DEL_LIMITE" };
@@ -108,8 +126,12 @@ export function evaluarEstadoMaterial({ tipoMaterial, d, diferencia, porcentaje,
   if (tipoMaterial === "CAJA PLEGADIZA") return { estado: Math.abs(toSafeNumber(diferencia)) <= toSafeNumber(d) * 0.01 ? "DENTRO_DEL_LIMITE" : "FUERA_DEL_LIMITE" };
   if (tipoMaterial === "CAJA EMPAQUE") return { estado: Math.abs(Number(diferencia)) <= 10 ? "DENTRO_DEL_LIMITE" : "FUERA_DEL_LIMITE" };
   if (tipoMaterial === "ETIQUETA COLECTIVA") return { estado: Math.abs(toSafeNumber(diferencia)) <= 10 ? "DENTRO_DEL_LIMITE" : "FUERA_DEL_LIMITE" };
-  if (tipoMaterial === "INSTRUCTIVO" || tipoMaterial === "SELLO GARANTÍA") {
-    const max = toSafeNumber(d) * (tipoMaterial === "INSTRUCTIVO" ? 0.01 : 0.07);
+  if (tipoMaterial === "INSTRUCTIVO") {
+    if (toSafeNumber(d) === 0) return { estado: "PENDIENTE_DE_REVISION" };
+    return { estado: toSafeNumber(porcentaje) <= 1 ? "DENTRO_DEL_LIMITE" : "FUERA_DEL_LIMITE" };
+  }
+  if (tipoMaterial === "SELLO GARANTÍA") {
+    const max = toSafeNumber(d) * 0.07;
     return { estado: Math.abs(toSafeNumber(diferencia)) <= max ? "DENTRO_DEL_LIMITE" : "FUERA_DEL_LIMITE" };
   }
   return { estado: "PENDIENTE_DE_REVISION" };

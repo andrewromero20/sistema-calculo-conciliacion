@@ -11,8 +11,10 @@ import {
   calcularECajaPlegadiza,
   calcularECajaEmpaque,
   calcularEInstructivo,
+  calcularESelloGarantia,
   calcularFCajaEmpaque,
   calcularFInstructivo,
+  calcularFSelloGarantia,
   calcularEEtiquetaColectiva,
   calcularETableta,
   calcularFCajaPlegadiza,
@@ -21,6 +23,7 @@ import {
   calcularGCajaPlegadiza,
   calcularGCajaEmpaque,
   calcularGInstructivo,
+  calcularGSelloGarantia,
   calcularGEtiquetaColectiva,
   calcularGTableta,
   calcularPorcentajeDiferencia,
@@ -142,9 +145,10 @@ export default function MaterialCapturePage() {
   const isEtiquetaColectiva = material?.descripcion === "ETIQUETA COLECTIVA";
   const isCajaEmpaque = material?.descripcion === "CAJA EMPAQUE";
   const isInstructivo = material?.descripcion === "INSTRUCTIVO";
+  const isSelloGarantia = material?.descripcion === "SELLO GARANTÍA";
   const normalizedB = isTablet ? 0 : toNumber(values.cantidadAdicionalB);
   const normalizedC = isTablet ? 0 : toNumber(values.cantidadDevueltaC);
-  const totalRecibidaD = isCajaPlegadiza || isEtiquetaColectiva || isCajaEmpaque || isInstructivo
+  const totalRecibidaD = isCajaPlegadiza || isEtiquetaColectiva || isCajaEmpaque || isInstructivo || isSelloGarantia
     ? calcularTotalRecibido(values.cantidadSurtidaA, values.cantidadAdicionalB, values.cantidadDevueltaC)
     : calcularTotalRecibido(values.cantidadSurtidaA, normalizedB, normalizedC);
   const tabletaResultadoE = isTablet
@@ -179,6 +183,9 @@ export default function MaterialCapturePage() {
   const instructivoResultadoE = isInstructivo ? calcularEInstructivo(values.resultadoE) : null;
   const instructivoResultadoF = isInstructivo ? calcularFInstructivo(values.resultadoF) : null;
   const instructivoResultadoG = isInstructivo ? calcularGInstructivo(values.resultadoG) : null;
+  const selloResultadoE = isSelloGarantia ? calcularESelloGarantia(values.resultadoE) : null;
+  const selloResultadoF = isSelloGarantia ? calcularFSelloGarantia(values.resultadoF) : null;
+  const selloResultadoG = isSelloGarantia ? calcularGSelloGarantia(values.resultadoG) : null;
 
   const operacionEtiquetaE = (() => {
     if (!isEtiquetaColectiva) {
@@ -237,7 +244,9 @@ export default function MaterialCapturePage() {
           ? empaqueResultadoE
           : isInstructivo
             ? instructivoResultadoE
-            : values.resultadoE;
+            : isSelloGarantia
+              ? selloResultadoE
+              : values.resultadoE;
   const resultadoFVisible = isTablet
     ? tabletaResultadoF
     : isCajaPlegadiza
@@ -248,7 +257,9 @@ export default function MaterialCapturePage() {
           ? empaqueResultadoF
           : isInstructivo
             ? instructivoResultadoF
-            : values.resultadoF;
+            : isSelloGarantia
+              ? selloResultadoF
+              : values.resultadoF;
   const resultadoGVisible = isTablet
     ? tabletaResultadoG
     : isCajaPlegadiza
@@ -259,7 +270,9 @@ export default function MaterialCapturePage() {
           ? empaqueResultadoG
           : isInstructivo
             ? instructivoResultadoG
-            : values.resultadoG;
+            : isSelloGarantia
+              ? selloResultadoG
+              : values.resultadoG;
   const requiresCalculation = calculatedMaterialTypes.includes(material?.descripcion);
   const formulaD = "D = A + B - C";
   const formulaE = material?.descripcion === "CAJA PLEGADIZA"
@@ -312,6 +325,15 @@ export default function MaterialCapturePage() {
     : totalRecibidaD <= 0
       ? "PENDIENTE_DE_REVISION"
       : porcentajeDiferencia <= 1
+        ? "DENTRO_DEL_LIMITE"
+        : "FUERA_DEL_LIMITE";
+  const selloFaltanValores = [totalRecibidaD, selloResultadoE, selloResultadoF, selloResultadoG, totalUtilizadaH, diferencia]
+    .some((value) => value === null);
+  const selloEstado = selloFaltanValores
+    ? "CAPTURA_INCOMPLETA"
+    : totalRecibidaD <= 0
+      ? "PENDIENTE_DE_REVISION"
+      : porcentajeDiferencia <= 7
         ? "DENTRO_DEL_LIMITE"
         : "FUERA_DEL_LIMITE";
   const operacionCajaEmpaque = (() => {
@@ -382,7 +404,16 @@ export default function MaterialCapturePage() {
     setError("");
 
     try {
-      const payload = isInstructivo
+      const payload = isSelloGarantia
+        ? {
+          cantidadSurtidaA: parseNumeroOpcional(values.cantidadSurtidaA),
+          cantidadAdicionalB: parseNumeroOpcional(values.cantidadAdicionalB),
+          cantidadDevueltaC: parseNumeroOpcional(values.cantidadDevueltaC),
+          resultadoE: parseNumeroOpcional(values.resultadoE),
+          resultadoF: parseNumeroOpcional(values.resultadoF),
+          resultadoG: parseNumeroOpcional(values.resultadoG),
+        }
+        : isInstructivo
         ? {
           cantidadSurtidaA: parseNumeroOpcional(values.cantidadSurtidaA),
           cantidadAdicionalB: parseNumeroOpcional(values.cantidadAdicionalB),
@@ -519,6 +550,25 @@ export default function MaterialCapturePage() {
       diferencia={diferenciaVisible}
       porcentaje={porcentajeDiferenciaTexto}
       status={instructivoEstado}
+      error={error}
+      saving={saving}
+      onSubmit={handleSubmit}
+    />;
+  }
+  if (isSelloGarantia) {
+    return <SelloGarantiaCaptureForm
+      material={material}
+      numeroOrden={numeroOrden}
+      values={values}
+      updateValue={updateValue}
+      totalRecibida={totalRecibidaVisible}
+      resultadoE={selloResultadoE}
+      resultadoF={selloResultadoF}
+      resultadoG={selloResultadoG}
+      totalUtilizada={totalUtilizadaVisible}
+      diferencia={diferenciaVisible}
+      porcentaje={porcentajeDiferenciaTexto}
+      status={selloEstado}
       error={error}
       saving={saving}
       onSubmit={handleSubmit}
@@ -833,6 +883,28 @@ export default function MaterialCapturePage() {
     </main>
   </div>
 );
+}
+
+function SelloGarantiaCaptureForm({ material, numeroOrden, values, updateValue, totalRecibida, resultadoE, resultadoF, resultadoG, totalUtilizada, diferencia, porcentaje, status, error, saving, onSubmit }) {
+  const display = (value) => value ?? "";
+  const formatNumber = (value) => new Intl.NumberFormat("es-MX", { maximumFractionDigits: 3 }).format(Number(value));
+  const result = (value) => value === null || value === undefined || value === ""
+    ? "Pendiente"
+    : `${formatNumber(value)} PZA`;
+  const safeStatus = status || "CAPTURA_INCOMPLETA";
+  const friendlyStatus = {
+    CAPTURA_INCOMPLETA: "Captura incompleta",
+    DENTRO_DEL_LIMITE: "Dentro del límite",
+    FUERA_DEL_LIMITE: "Fuera del límite",
+    PENDIENTE_DE_REVISION: "Pendiente de revisión",
+  }[safeStatus] || "Captura incompleta";
+  const percentageDisplay = porcentaje === ""
+    ? "Pendiente"
+    : porcentaje === "No calculable"
+      ? porcentaje
+      : `${Number(porcentaje).toFixed(2)} %`;
+
+  return <div className="app-shell"><Sidebar activeView="inicio" /><main className="main-content"><Header title={`Material: ${material.descripcion}`} description={`Orden ${numeroOrden}`} /><form className="card material-capture-card" onSubmit={onSubmit}><div className="section-heading"><div><h2>Captura de SELLO GARANTÍA</h2><p>{material.codigoSAP} · {material.unidadMedida}</p></div><span className={`status-badge material-status-${safeStatus.toLowerCase().replaceAll("_", "-")}`}>{friendlyStatus}</span></div><p className="provisional-note">Captura provisional conforme a los valores documentados en la MBR. La automatización de E, F y G está pendiente de confirmación operativa.</p><div className="capture-grid"><h3 className="capture-section-title">Cantidad recibida</h3><label>A. Cantidad surtida<input type="number" min="0" step="any" value={display(values.cantidadSurtidaA)} onChange={(event) => updateValue("cantidadSurtidaA", event.target.value)} /><small>PZA</small></label><label>B. Cantidad adicional<input type="number" min="0" step="any" value={display(values.cantidadAdicionalB)} onChange={(event) => updateValue("cantidadAdicionalB", event.target.value)} /><small>PZA</small></label><label>C. Cantidad devuelta<input type="number" min="0" step="any" value={display(values.cantidadDevueltaC)} onChange={(event) => updateValue("cantidadDevueltaC", event.target.value)} /><small>PZA</small></label><label>D. Total recibido<input className="calculated-field" type="text" value={result(totalRecibida)} readOnly /></label><h3 className="capture-section-title">Cantidad utilizada E</h3><label>Sellos utilizados según MBR<input type="number" min="0" step="any" value={display(values.resultadoE)} onChange={(event) => updateValue("resultadoE", event.target.value)} /><small>Captura el total de sellos de garantía utilizados documentado en la MBR. PZA</small></label><label>E. Cantidad utilizada<input className="calculated-field" type="text" value={result(resultadoE)} readOnly /></label><h3 className="capture-section-title">Merma F</h3><label>Sellos registrados como merma según MBR<input type="number" min="0" step="any" value={display(values.resultadoF)} onChange={(event) => updateValue("resultadoF", event.target.value)} /><small>Captura la merma de sellos de garantía documentada en la MBR. PZA</small></label><label>F. Merma total<input className="calculated-field" type="text" value={result(resultadoF)} readOnly /></label><h3 className="capture-section-title">Muestra G</h3><label>Sellos tomados como muestra según MBR<input type="number" min="0" step="any" value={display(values.resultadoG)} onChange={(event) => updateValue("resultadoG", event.target.value)} /><small>Captura las muestras de sellos de garantía documentadas en la MBR. PZA</small></label><label>G. Cantidad de muestra<input className="calculated-field" type="text" value={result(resultadoG)} readOnly /></label><h3 className="capture-section-title">Resultado final</h3><label>H. Total utilizado<input className="calculated-field" type="text" value={result(totalUtilizada)} readOnly /></label><label>Diferencia<input className="calculated-field" type="text" value={result(diferencia)} readOnly /></label><label>Porcentaje de diferencia<input className="calculated-field" type="text" value={percentageDisplay} readOnly /></label><label>Límite permitido<input className="calculated-field" type="text" value="± 7.00 %" readOnly /></label><label>Estado<input className="calculated-field" type="text" value={friendlyStatus} readOnly /></label></div>{error && <p className="field-error">{error}</p>}<div className="button-row"><button className="button primary" type="submit" disabled={saving}>{saving ? "Guardando..." : "Guardar captura"}</button><Link className="button secondary" href={`/conciliaciones/${numeroOrden}`}>Cancelar</Link></div></form></main></div>;
 }
 
 function InstructivoCaptureForm({ material, numeroOrden, values, updateValue, totalRecibida, resultadoE, resultadoF, resultadoG, totalUtilizada, diferencia, porcentaje, status, error, saving, onSubmit }) {

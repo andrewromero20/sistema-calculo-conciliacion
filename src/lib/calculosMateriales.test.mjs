@@ -12,6 +12,9 @@ import {
   calcularEInstructivo,
   calcularFInstructivo,
   calcularGInstructivo,
+  calcularESelloGarantia,
+  calcularFSelloGarantia,
+  calcularGSelloGarantia,
   calcularEEtiquetaColectiva,
   calcularECajaEmpaque,
   calcularFTableta,
@@ -226,6 +229,47 @@ test('INSTRUCTIVO: límite 1%, D cero y captura incompleta', () => {
   assert.equal(evaluarEstadoMaterial({ tipoMaterial: 'INSTRUCTIVO', d: -1, diferencia: 0, porcentaje: null, faltanValores: false }).estado, 'PENDIENTE_DE_REVISION');
   assert.equal(evaluarEstadoMaterial({ tipoMaterial: 'INSTRUCTIVO', d: null, diferencia: null, porcentaje: null, faltanValores: true }).estado, 'CAPTURA_INCOMPLETA');
   assert.equal(calcularTotalUtilizadoAH(9950, null, 20), null);
+});
+
+test('SELLO GARANTÍA: E, F y G son capturas MBR manuales con null, cero y positivos', () => {
+  assert.equal(calcularESelloGarantia(null), null);
+  assert.equal(calcularESelloGarantia(0), 0);
+  assert.equal(calcularESelloGarantia(9950), 9950);
+  assert.equal(calcularESelloGarantia(-1), null);
+  assert.equal(calcularFSelloGarantia(null), null);
+  assert.equal(calcularFSelloGarantia(0), 0);
+  assert.equal(calcularFSelloGarantia(80), 80);
+  assert.equal(calcularFSelloGarantia(-1), null);
+  assert.equal(calcularGSelloGarantia(null), null);
+  assert.equal(calcularGSelloGarantia(0), 0);
+  assert.equal(calcularGSelloGarantia(20), 20);
+  assert.equal(calcularGSelloGarantia(-1), null);
+});
+
+test('SELLO GARANTÍA: calcula el caso principal y conserva diferencia negativa', () => {
+  const d = calcularTotalRecibido(10000, 100, 50);
+  const e = calcularESelloGarantia(9950);
+  const f = calcularFSelloGarantia(80);
+  const g = calcularGSelloGarantia(20);
+  const h = calcularTotalUtilizadoAH(e, f, g);
+  const difference = calcularDiferenciaAH(d, h);
+  const percentage = calcularPorcentajeDiferencia(d, difference);
+
+  assert.equal(d, 10050);
+  assert.equal(h, 10050);
+  assert.equal(difference, 0);
+  assert.equal(percentage, 0);
+  assert.equal(calcularDiferenciaAH(10000, 10701), -701);
+  assert.equal(calcularPorcentajeDiferencia(10000, -701), 7.01);
+});
+
+test('SELLO GARANTÍA: límite 7%, D cero pendiente de revisión y valores incompletos', () => {
+  assert.equal(evaluarEstadoMaterial({ tipoMaterial: 'SELLO GARANTÍA', d: 10000, diferencia: 700, porcentaje: 7, faltanValores: false }).estado, 'DENTRO_DEL_LIMITE');
+  assert.equal(evaluarEstadoMaterial({ tipoMaterial: 'SELLO GARANTÍA', d: 10000, diferencia: 701, porcentaje: 7.01, faltanValores: false }).estado, 'FUERA_DEL_LIMITE');
+  assert.equal(evaluarEstadoMaterial({ tipoMaterial: 'SELLO GARANTÍA', d: 10000, diferencia: -701, porcentaje: 7.01, faltanValores: false }).estado, 'FUERA_DEL_LIMITE');
+  assert.equal(calcularPorcentajeDiferencia(0, 0), null);
+  assert.equal(evaluarEstadoMaterial({ tipoMaterial: 'SELLO GARANTÍA', d: 0, diferencia: 0, porcentaje: null, faltanValores: false }).estado, 'PENDIENTE_DE_REVISION');
+  assert.equal(evaluarEstadoMaterial({ tipoMaterial: 'SELLO GARANTÍA', d: 10000, diferencia: null, porcentaje: null, faltanValores: true }).estado, 'CAPTURA_INCOMPLETA');
 });
 
 test('FOIL PVC: G no se duplica y la diferencia usa D - E - F', () => {

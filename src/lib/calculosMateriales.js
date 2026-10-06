@@ -118,6 +118,24 @@ export function calcularGInstructivo(valorMuestra) {
   return Number.isFinite(value) && value >= 0 ? value : null;
 }
 
+export function calcularESelloGarantia(valorUtilizado) {
+  if (isEmptyValue(valorUtilizado)) return null;
+  const value = Number(valorUtilizado);
+  return Number.isFinite(value) && value >= 0 ? value : null;
+}
+
+export function calcularFSelloGarantia(valorMerma) {
+  if (isEmptyValue(valorMerma)) return null;
+  const value = Number(valorMerma);
+  return Number.isFinite(value) && value >= 0 ? value : null;
+}
+
+export function calcularGSelloGarantia(valorMuestra) {
+  if (isEmptyValue(valorMuestra)) return null;
+  const value = Number(valorMuestra);
+  return Number.isFinite(value) && value >= 0 ? value : null;
+}
+
 export function evaluarEstadoMaterial({ tipoMaterial, d, diferencia, porcentaje, faltanValores }) {
   if (faltanValores) return { estado: "CAPTURA_INCOMPLETA" };
   if (tipoMaterial === "FOIL ALUMINIO") return { estado: Math.abs(toSafeNumber(diferencia)) <= 2 ? "DENTRO_DEL_LIMITE" : "FUERA_DEL_LIMITE" };
@@ -131,8 +149,8 @@ export function evaluarEstadoMaterial({ tipoMaterial, d, diferencia, porcentaje,
     return { estado: toSafeNumber(porcentaje) <= 1 ? "DENTRO_DEL_LIMITE" : "FUERA_DEL_LIMITE" };
   }
   if (tipoMaterial === "SELLO GARANTÍA") {
-    const max = toSafeNumber(d) * 0.07;
-    return { estado: Math.abs(toSafeNumber(diferencia)) <= max ? "DENTRO_DEL_LIMITE" : "FUERA_DEL_LIMITE" };
+    if (toSafeNumber(d) <= 0) return { estado: "PENDIENTE_DE_REVISION" };
+    return { estado: toSafeNumber(porcentaje) <= 7 ? "DENTRO_DEL_LIMITE" : "FUERA_DEL_LIMITE" };
   }
   return { estado: "PENDIENTE_DE_REVISION" };
 }

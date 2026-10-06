@@ -10,6 +10,9 @@ import {
   calcularEInstructivo,
   calcularFInstructivo,
   calcularGInstructivo,
+  calcularESelloGarantia,
+  calcularFSelloGarantia,
+  calcularGSelloGarantia,
   calcularETableta,
   calcularEEtiquetaColectiva,
   calcularFTableta,
@@ -198,6 +201,38 @@ export async function PUT(request, { params }) {
           {
             error: "Las cantidades no pueden ser negativas.",
             campos: negativeInstructivoFields,
+          },
+          { status: 400 },
+        );
+      }
+    }
+
+    if (currentMaterial.descripcion === "SELLO GARANTÍA") {
+      const negativeSelloFields = ["resultadoE", "resultadoF", "resultadoG"].filter((field) =>
+        data[field] !== undefined && data[field] !== null && data[field] < 0,
+      );
+
+      if (negativeSelloFields.length > 0) {
+        return Response.json(
+          {
+            error: "Las cantidades no pueden ser negativas.",
+            campos: negativeSelloFields,
+          },
+          { status: 400 },
+        );
+      }
+    }
+
+    if (currentMaterial.descripcion === "SELLO GARANTÍA") {
+      const negativeSelloFields = ["resultadoE", "resultadoF", "resultadoG"].filter((field) =>
+        data[field] !== undefined && data[field] !== null && data[field] < 0,
+      );
+
+      if (negativeSelloFields.length > 0) {
+        return Response.json(
+          {
+            error: "Las cantidades no pueden ser negativas.",
+            campos: negativeSelloFields,
           },
           { status: 400 },
         );
@@ -417,6 +452,90 @@ export async function PUT(request, { params }) {
         diferencia,
         porcentajeDiferencia,
         limitePermitido: 1,
+        estadoMaterial,
+      });
+    }
+
+    if (nextData.descripcion === "SELLO GARANTÍA") {
+      // Captura manual temporal conforme a valores documentados en la MBR. Pendiente definir el origen automatizado de E, F y G.
+      const totalRecibidaD = calcularTotalRecibido(
+        nextData.cantidadSurtidaA,
+        nextData.cantidadAdicionalB,
+        nextData.cantidadDevueltaC,
+      );
+      const resultadoE = calcularESelloGarantia(nextData.resultadoE);
+      const resultadoF = calcularFSelloGarantia(nextData.resultadoF);
+      const resultadoG = calcularGSelloGarantia(nextData.resultadoG);
+      const totalUtilizadaH = calcularTotalUtilizadoAH(resultadoE, resultadoF, resultadoG);
+      const diferencia = calcularDiferenciaAH(totalRecibidaD, totalUtilizadaH);
+      const porcentajeDiferencia = calcularPorcentajeDiferencia(totalRecibidaD, diferencia);
+      const faltanValores = [
+        totalRecibidaD,
+        resultadoE,
+        resultadoF,
+        resultadoG,
+        totalUtilizadaH,
+        diferencia,
+      ].some((value) => value === null);
+      const estadoMaterial = faltanValores
+        ? "CAPTURA_INCOMPLETA"
+        : totalRecibidaD <= 0
+          ? "PENDIENTE_DE_REVISION"
+          : porcentajeDiferencia <= 7
+            ? "DENTRO_DEL_LIMITE"
+            : "FUERA_DEL_LIMITE";
+
+      Object.assign(data, {
+        totalRecibidaD,
+        resultadoE,
+        resultadoF,
+        resultadoG,
+        totalUtilizadaH,
+        diferencia,
+        porcentajeDiferencia,
+        limitePermitido: 7,
+        estadoMaterial,
+      });
+    }
+
+    if (nextData.descripcion === "SELLO GARANTÍA") {
+      // Captura manual temporal conforme a valores documentados en la MBR. Pendiente definir el origen automatizado de E, F y G.
+      const totalRecibidaD = calcularTotalRecibido(
+        nextData.cantidadSurtidaA,
+        nextData.cantidadAdicionalB,
+        nextData.cantidadDevueltaC,
+      );
+      const resultadoE = calcularESelloGarantia(nextData.resultadoE);
+      const resultadoF = calcularFSelloGarantia(nextData.resultadoF);
+      const resultadoG = calcularGSelloGarantia(nextData.resultadoG);
+      const totalUtilizadaH = calcularTotalUtilizadoAH(resultadoE, resultadoF, resultadoG);
+      const diferencia = calcularDiferenciaAH(totalRecibidaD, totalUtilizadaH);
+      const porcentajeDiferencia = calcularPorcentajeDiferencia(totalRecibidaD, diferencia);
+      const faltanValores = [
+        totalRecibidaD,
+        resultadoE,
+        resultadoF,
+        resultadoG,
+        totalUtilizadaH,
+        diferencia,
+      ].some((value) => value === null);
+      const estadoMaterial = faltanValores
+        ? "CAPTURA_INCOMPLETA"
+        : totalRecibidaD <= 0
+          ? "PENDIENTE_DE_REVISION"
+          : porcentajeDiferencia <= 7
+            ? "DENTRO_DEL_LIMITE"
+            : "FUERA_DEL_LIMITE";
+
+      Object.assign(data, {
+        totalRecibidaD,
+        resultadoE,
+        resultadoF,
+        resultadoG,
+        totalUtilizadaH,
+        diferencia,
+        porcentajeDiferencia,
+        limitePermitido: 7,
         estadoMaterial,
       });
     }

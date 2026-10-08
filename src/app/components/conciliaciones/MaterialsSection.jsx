@@ -169,24 +169,59 @@ export default function MaterialsSection({ numeroOrden, conciliacionId, material
   }
 
   function formatLimit(material) {
-    if (material.descripcion === "FOIL PVC") {
-      return "± 7.00 %";
+    const descripcion = String(
+      material.descripcion ?? "",
+    )
+      .trim()
+      .toUpperCase();
+
+    if (
+      material.limitePermitido === null ||
+      material.limitePermitido === undefined
+    ) {
+      return "Pendiente";
+    }
+
+    const limite = Number(
+      material.limitePermitido,
+    );
+
+    if (!Number.isFinite(limite)) {
+      return "Pendiente";
+    }
+
+    if (descripcion === "TABLETA") {
+      return `± ${limite.toFixed(2)} %`;
     }
 
     if (
-      material.descripcion === "FOIL ALUMINIO"
+      descripcion === "CAJA PLEGADIZA" ||
+      descripcion === "INSTRUCTIVO" ||
+      descripcion === "SELLO GARANTÍA" ||
+      descripcion === "FOIL PVC"
     ) {
-      return "± 2.000 kg";
+      return `± ${limite.toFixed(2)} %`;
     }
-    if (material.limitePermitido === null || material.limitePermitido === undefined) return "Pendiente";
-    if (material.descripcion === "INSTRUCTIVO") {
-      return `± ${Number(material.limitePermitido).toFixed(2)} %`;
+
+    if (
+      descripcion === "FOIL ALUMINIO"
+    ) {
+      return `± ${limite.toFixed(3)} kg`;
     }
-    if (material.descripcion === "SELLO GARANTÍA") {
-      return `± ${Number(material.limitePermitido).toFixed(2)} %`;
+
+    if (
+      descripcion === "ETIQUETA COLECTIVA" ||
+      descripcion === "CAJA EMPAQUE"
+    ) {
+      return `± ${limite.toLocaleString(
+        "es-MX",
+        {
+          maximumFractionDigits: 3,
+        },
+      )} PZA`;
     }
-    const suffix = material.descripcion === "CAJA PLEGADIZA" ? "%" : " PZA";
-    return `${formatQuantity(material.limitePermitido)}${suffix}`;
+
+    return String(limite);
   }
 
   function friendlyStatus(status) {

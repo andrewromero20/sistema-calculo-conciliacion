@@ -229,7 +229,22 @@ export function evaluarEstadoMaterial({ tipoMaterial, d, diferencia, porcentaje,
           : "FUERA_DEL_LIMITE",
     };
   }
-  if (tipoMaterial === 'TABLETA') return { estado: 'PENDIENTE_DE_REVISION' };
+  if (tipoMaterial === "TABLETA") {
+    if (toSafeNumber(d) === 0) {
+      return {
+        estado: "PENDIENTE_DE_REVISION",
+      };
+    }
+
+    return {
+      estado:
+        Math.abs(toSafeNumber(diferencia)) <=
+        Math.abs(toSafeNumber(d)) * 0.07
+          ? "DENTRO_DEL_LIMITE"
+          : "FUERA_DEL_LIMITE",
+    };
+  }
+
   if (tipoMaterial === 'CAJA PLEGADIZA') return { estado: Math.abs(toSafeNumber(diferencia)) <= toSafeNumber(d) * 0.01 ? 'DENTRO_DEL_LIMITE' : 'FUERA_DEL_LIMITE' };
   if (tipoMaterial === 'CAJA EMPAQUE') return { estado: Math.abs(Number(diferencia)) <= 10 ? 'DENTRO_DEL_LIMITE' : 'FUERA_DEL_LIMITE' };
   if (tipoMaterial === 'ETIQUETA COLECTIVA') return { estado: Math.abs(toSafeNumber(diferencia)) <= 10 ? 'DENTRO_DEL_LIMITE' : 'FUERA_DEL_LIMITE' };

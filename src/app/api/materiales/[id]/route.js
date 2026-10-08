@@ -247,30 +247,55 @@ export async function PUT(request, { params }) {
     const nextData = { ...currentMaterial, ...data };
 
     if (nextData.descripcion === "TABLETA") {
-      const cantidadAdicionalB = nextData.cantidadAdicionalB ?? 0;
-      const cantidadDevueltaC = nextData.cantidadDevueltaC ?? 0;
-      const totalRecibidaD = calcularTotalRecibido(
-        nextData.cantidadSurtidaA,
-        cantidadAdicionalB,
-        cantidadDevueltaC,
-      );
+      const cantidadAdicionalB =
+        nextData.cantidadAdicionalB ?? 0;
+
+      const cantidadDevueltaC =
+        nextData.cantidadDevueltaC ?? 0;
+
+      const totalRecibidaD =
+        calcularTotalRecibido(
+          nextData.cantidadSurtidaA,
+          cantidadAdicionalB,
+          cantidadDevueltaC,
+        );
+
       const resultadoE = calcularETableta(
         nextData.cantidadRealAcondicionada,
         nextData.tabletasPorBlister,
       );
+
       const resultadoF = calcularFTableta({
         telecamara: nextData.telecamara,
         hermeticidad: nextData.hermeticidad,
         otraMerma: nextData.otraMerma,
-        tabletasPorBlister: nextData.tabletasPorBlister,
+        tabletasPorBlister:
+          nextData.tabletasPorBlister,
       });
+
       const resultadoG = calcularGTableta(
         nextData.cajasTomadasMuestra,
         nextData.tabletasPorBlister,
       );
-      const totalUtilizadaH = calcularTotalUtilizadoAH(resultadoE, resultadoF, resultadoG);
-      const diferencia = calcularDiferenciaAH(totalRecibidaD, totalUtilizadaH);
-      const porcentajeDiferencia = calcularPorcentajeDiferencia(totalRecibidaD, diferencia);
+
+      const totalUtilizadaH =
+        calcularTotalUtilizadoAH(
+          resultadoE,
+          resultadoF,
+          resultadoG,
+        );
+
+      const diferencia = calcularDiferenciaAH(
+        totalRecibidaD,
+        totalUtilizadaH,
+      );
+
+      const porcentajeDiferencia =
+        calcularPorcentajeDiferencia(
+          totalRecibidaD,
+          diferencia,
+        );
+
       const faltanValores = [
         totalRecibidaD,
         resultadoE,
@@ -278,7 +303,20 @@ export async function PUT(request, { params }) {
         resultadoG,
         totalUtilizadaH,
         diferencia,
-      ].some((value) => value === null);
+      ].some(
+        (value) =>
+          value === null ||
+          value === undefined,
+      );
+
+      const { estado: estadoMaterial } =
+        evaluarEstadoMaterial({
+          tipoMaterial: "TABLETA",
+          d: totalRecibidaD,
+          diferencia,
+          porcentaje: porcentajeDiferencia,
+          faltanValores,
+        });
 
       Object.assign(data, {
         cantidadAdicionalB,
@@ -290,7 +328,8 @@ export async function PUT(request, { params }) {
         totalUtilizadaH,
         diferencia,
         porcentajeDiferencia,
-        estadoMaterial: faltanValores ? "CAPTURA_INCOMPLETA" : "PENDIENTE_DE_REVISION",
+        limitePermitido: 7,
+        estadoMaterial,
       });
     }
 

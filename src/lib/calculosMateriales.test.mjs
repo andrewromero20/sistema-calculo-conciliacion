@@ -26,6 +26,11 @@ import {
   calcularDiferencia,
   calcularPorcentaje,
   evaluarEstadoMaterial,
+  calcularEFoil,
+  calcularFFoil,
+  calcularTotalFoil,
+  calcularDiferenciaFoil,
+
 } from './calculosMateriales.mjs';
 
 test('TABLETA: la API de fórmulas expone H, diferencia y porcentaje', () => {
@@ -332,3 +337,156 @@ test('Cero confirmado es aceptado como valor válido', () => {
 
   assert.equal(resultado.estado, 'DENTRO_DEL_LIMITE');
 });
+
+
+test(
+  "FOIL PVC: 7 por ciento está dentro del límite",
+  () => {
+    const d = 100;
+    const e = calcularEFoil(1);
+    const f = calcularFFoil(92);
+    const h = calcularTotalFoil(e, f);
+
+    const diferencia =
+      calcularDiferenciaFoil(d, e, f);
+
+    const porcentaje =
+      calcularPorcentajeDiferencia(
+        d,
+        diferencia
+      );
+
+    const resultado =
+      evaluarEstadoMaterial({
+        tipoMaterial: "FOIL PVC",
+        d,
+        diferencia,
+        porcentaje,
+        faltanValores: false,
+      });
+
+    assert.equal(h, 93);
+    assert.equal(diferencia, 7);
+    assert.equal(porcentaje, 7);
+    assert.equal(
+      resultado.estado,
+      "DENTRO_DEL_LIMITE"
+    );
+  }
+);
+
+test(
+  "FOIL PVC: más de 7 por ciento está fuera del límite",
+  () => {
+    const d = 100;
+    const e = calcularEFoil(1);
+    const f = calcularFFoil(91.999);
+
+    const diferencia =
+      calcularDiferenciaFoil(d, e, f);
+
+    const porcentaje =
+      calcularPorcentajeDiferencia(
+        d,
+        diferencia
+      );
+
+    const resultado =
+      evaluarEstadoMaterial({
+        tipoMaterial: "FOIL PVC",
+        d,
+        diferencia,
+        porcentaje,
+        faltanValores: false,
+      });
+
+    assert.equal(diferencia, 7.001);
+    assert.equal(
+      resultado.estado,
+      "FUERA_DEL_LIMITE"
+    );
+  }
+);
+
+test(
+  "FOIL ALUMINIO: 2 kg está dentro del límite",
+  () => {
+    const d = 100;
+    const e = calcularEFoil(1);
+    const f = calcularFFoil(97);
+    const h = calcularTotalFoil(e, f);
+
+    const diferencia =
+      calcularDiferenciaFoil(d, e, f);
+
+    const resultado =
+      evaluarEstadoMaterial({
+        tipoMaterial: "FOIL ALUMINIO",
+        d,
+        diferencia,
+        porcentaje: null,
+        faltanValores: false,
+      });
+
+    assert.equal(h, 98);
+    assert.equal(diferencia, 2);
+    assert.equal(
+      resultado.estado,
+      "DENTRO_DEL_LIMITE"
+    );
+  }
+);
+
+test(
+  "FOIL ALUMINIO: más de 2 kg está fuera del límite",
+  () => {
+    const d = 100;
+    const e = calcularEFoil(1);
+    const f = calcularFFoil(96.999);
+
+    const diferencia =
+      calcularDiferenciaFoil(d, e, f);
+
+    const resultado =
+      evaluarEstadoMaterial({
+        tipoMaterial: "FOIL ALUMINIO",
+        d,
+        diferencia,
+        porcentaje: null,
+        faltanValores: false,
+      });
+
+    assert.equal(diferencia, 2.001);
+    assert.equal(
+      resultado.estado,
+      "FUERA_DEL_LIMITE"
+    );
+  }
+);
+
+test(
+  "FOILS: captura incompleta y D igual a cero",
+  () => {
+    assert.equal(
+      evaluarEstadoMaterial({
+        tipoMaterial: "FOIL PVC",
+        d: null,
+        diferencia: null,
+        porcentaje: null,
+        faltanValores: true,
+      }).estado,
+      "CAPTURA_INCOMPLETA"
+    );
+
+    assert.equal(
+      evaluarEstadoMaterial({
+        tipoMaterial: "FOIL ALUMINIO",
+        d: 0,
+        diferencia: 0,
+        porcentaje: null,
+        faltanValores: false,
+      }).estado,
+      "PENDIENTE_DE_REVISION"
+    );
+  }
+);

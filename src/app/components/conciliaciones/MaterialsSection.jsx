@@ -44,6 +44,13 @@ const materialTypes = [
   "TABLETA",
 ];
 
+function isFoilMaterial(material) {
+  return [
+    "FOIL PVC",
+    "FOIL ALUMINIO",
+  ].includes(material.descripcion);
+}
+
 export default function MaterialsSection({ numeroOrden, conciliacionId, materials = [] }) {
   const router = useRouter();
   const [materialList, setMaterialList] = useState(materials);
@@ -162,11 +169,17 @@ export default function MaterialsSection({ numeroOrden, conciliacionId, material
   }
 
   function formatLimit(material) {
+    if (material.descripcion === "FOIL PVC") {
+      return "± 7.00 %";
+    }
+
+    if (
+      material.descripcion === "FOIL ALUMINIO"
+    ) {
+      return "± 2.000 kg";
+    }
     if (material.limitePermitido === null || material.limitePermitido === undefined) return "Pendiente";
     if (material.descripcion === "INSTRUCTIVO") {
-      return `± ${Number(material.limitePermitido).toFixed(2)} %`;
-    }
-    if (material.descripcion === "SELLO GARANTÍA") {
       return `± ${Number(material.limitePermitido).toFixed(2)} %`;
     }
     if (material.descripcion === "SELLO GARANTÍA") {
@@ -190,5 +203,15 @@ export default function MaterialsSection({ numeroOrden, conciliacionId, material
 
   const form = <form className="material-form" onSubmit={editingMaterial ? handleEditMaterial : handleAddMaterial}><label htmlFor="material-description">Descripción</label><select id="material-description" value={description} onChange={(event) => setDescription(event.target.value)}><option value="">Selecciona un tipo de material</option>{materialTypes.map((type) => <option key={type} value={type}>{type}</option>)}</select><label htmlFor="material-sap-code">Código SAP</label><input id="material-sap-code" value={sapCode} onChange={(event) => setSapCode(event.target.value)} placeholder="Ej. 10002345" /><label htmlFor="material-unit">Unidad</label><input id="material-unit" value={unit} onChange={(event) => setUnit(event.target.value)} placeholder="Ej. PZA" />{error && <p className="field-error">{error}</p>}<div className="button-row"><button className="button primary" type="submit"><Icon name={editingMaterial ? "edit" : "plus"} size={17} />{editingMaterial ? "Guardar cambios" : "Guardar material"}</button><button className="button secondary" type="button" onClick={editingMaterial ? cancelEditing : () => { setIsAdding(false); setError(""); }}>Cancelar</button></div></form>;
 
-  return <section className="card materials-card"><div className="section-heading"><div><h2>Materiales</h2><p>Materiales asociados a esta conciliación.</p></div><span className="recent-count">{materialList.length} registros</span></div><div className="materials-table-wrap"><table className="materials-summary-table"><thead><tr><th className="material-sticky-column">Material</th><th>SAP</th><th>Unidad</th><th className="quantity-header">A</th><th className="quantity-header">B</th><th className="quantity-header">C</th><th className="quantity-header">D</th><th className="usage-header">E</th><th className="usage-header">F</th><th className="usage-header">G</th><th className="usage-header">H</th><th className="difference-header">Diferencia D - H</th><th>Porcentaje sobre D</th><th>Límite permitido</th><th>Estado</th><th>Acciones</th></tr></thead><tbody>{materialList.length === 0 ? <tr><td className="materials-empty-cell" colSpan={16}>Aún no hay materiales agregados.</td></tr> : materialList.map((material) => <tr key={material.id}><th scope="row" className="material-sticky-column material-name">{material.descripcion}</th><td>{material.codigoSAP}</td><td>{material.unidadMedida}</td><td>{formatQuantity(material.cantidadSurtidaA)}</td><td>{formatQuantity(material.cantidadAdicionalB)}</td><td>{formatQuantity(material.cantidadDevueltaC)}</td><td className="calculated-summary-cell">{formatQuantity(material.totalRecibidaD)}</td><td>{formatQuantity(material.resultadoE)}</td><td>{formatQuantity(material.resultadoF)}</td><td>{formatQuantity(material.resultadoG)}</td><td className="calculated-summary-cell">{formatQuantity(material.totalUtilizadaH)}</td><td className="difference-cell">{formatQuantity(material.diferencia)}</td><td>{formatPercentage(material.porcentajeDiferencia)}</td><td>{formatLimit(material)}</td><td><span className={`status-badge material-status-${String(material.estadoMaterial || "pendiente").toLowerCase().replaceAll("_", "-").replaceAll(" ", "-")}`}>{friendlyStatus(material.estadoMaterial)}</span></td><td><span className="material-actions"><button className="icon-button" type="button" onClick={() => startEditing(material)} title={`Editar ${material.descripcion}`}><Icon name="edit" size={16} /></button><button className="icon-button danger" type="button" onClick={() => handleDeleteMaterial(material)} title={`Eliminar ${material.descripcion}`}><Icon name="trash" size={16} /></button></span></td></tr>)}</tbody></table></div>{editingMaterial ? form : isAdding ? form : <button className="button secondary materials-add-button" type="button" onClick={() => { setIsAdding(true); setError(""); }}><Icon name="plus" size={17} />Agregar material</button>}</section>;
+  return <section className="card materials-card"><div className="section-heading"><div><h2>Materiales</h2><p>Materiales asociados a esta conciliación.</p></div><span className="recent-count">{materialList.length} registros</span></div><div className="materials-table-wrap"><table className="materials-summary-table"><thead><tr><th className="material-sticky-column">Material</th><th>SAP</th><th>Unidad</th><th className="quantity-header">A</th><th className="quantity-header">B</th><th className="quantity-header">C</th><th className="quantity-header">D</th><th className="usage-header">E</th><th className="usage-header">F</th><th className="usage-header">G</th><th className="usage-header">H</th><th className="difference-header">Diferencia D - H</th><th>Porcentaje sobre D</th><th>Límite permitido</th><th>Estado</th><th>Acciones</th></tr></thead><tbody>{materialList.length === 0 ? <tr><td className="materials-empty-cell" colSpan={16}>Aún no hay materiales agregados.</td></tr> : materialList.map((material) => <tr key={material.id}><th scope="row" className="material-sticky-column material-name">{material.descripcion}</th><td>{material.codigoSAP}</td><td>{material.unidadMedida}</td><td>{formatQuantity(material.cantidadSurtidaA)}</td><td>{formatQuantity(material.cantidadAdicionalB)}</td><td>{formatQuantity(material.cantidadDevueltaC)}</td><td className="calculated-summary-cell">{formatQuantity(material.totalRecibidaD)}</td><td>{formatQuantity(material.resultadoE)}</td><td>{formatQuantity(material.resultadoF)}</td><td>
+  {isFoilMaterial(material)
+    ? "No aplica"
+    : formatQuantity(material.resultadoG)}
+</td><td className="calculated-summary-cell">{formatQuantity(material.totalUtilizadaH)}</td><td className="difference-cell">{formatQuantity(material.diferencia)}</td><td>
+  {material.descripcion === "FOIL ALUMINIO"
+    ? "No aplica"
+    : formatPercentage(
+        material.porcentajeDiferencia
+      )}
+</td><td>{formatLimit(material)}</td><td><span className={`status-badge material-status-${String(material.estadoMaterial || "pendiente").toLowerCase().replaceAll("_", "-").replaceAll(" ", "-")}`}>{friendlyStatus(material.estadoMaterial)}</span></td><td><span className="material-actions"><button className="icon-button" type="button" onClick={() => startEditing(material)} title={`Editar ${material.descripcion}`}><Icon name="edit" size={16} /></button><button className="icon-button danger" type="button" onClick={() => handleDeleteMaterial(material)} title={`Eliminar ${material.descripcion}`}><Icon name="trash" size={16} /></button></span></td></tr>)}</tbody></table></div>{editingMaterial ? form : isAdding ? form : <button className="button secondary materials-add-button" type="button" onClick={() => { setIsAdding(true); setError(""); }}><Icon name="plus" size={17} />Agregar material</button>}</section>;
 }

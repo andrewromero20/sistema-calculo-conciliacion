@@ -156,10 +156,105 @@ export function calcularGSelloGarantia(valorMuestra) {
   return Number.isFinite(value) && value >= 0 ? value : null;
 }
 
+export function calcularEFoil(valor) {
+  if (isEmptyValue(valor)) {
+    return null;
+  }
+
+  const numero = toSafeNumber(valor);
+
+  return numero >= 0 ? numero : null;
+}
+
+export function calcularFFoil(valor) {
+  if (isEmptyValue(valor)) {
+    return null;
+  }
+
+  const numero = toSafeNumber(valor);
+
+  return numero >= 0 ? numero : null;
+}
+
+export function calcularTotalFoil(
+  resultadoE,
+  resultadoF
+) {
+  if (
+    isEmptyValue(resultadoE) ||
+    isEmptyValue(resultadoF)
+  ) {
+    return null;
+  }
+
+  return Number(
+    (
+      toSafeNumber(resultadoE) +
+      toSafeNumber(resultadoF)
+    ).toFixed(3)
+  );
+}
+
+export function calcularDiferenciaFoil(
+  totalRecibidaD,
+  resultadoE,
+  resultadoF
+) {
+  if (
+    isEmptyValue(totalRecibidaD) ||
+    isEmptyValue(resultadoE) ||
+    isEmptyValue(resultadoF)
+  ) {
+    return null;
+  }
+
+  return Number(
+    (
+      toSafeNumber(totalRecibidaD) -
+      toSafeNumber(resultadoE) -
+      toSafeNumber(resultadoF)
+    ).toFixed(3)
+  );
+}
+
 export function evaluarEstadoMaterial({ tipoMaterial, d, diferencia, porcentaje, faltanValores }) {
   if (faltanValores) return { estado: 'CAPTURA_INCOMPLETA' };
-  if (tipoMaterial === 'FOIL ALUMINIO') return { estado: Math.abs(toSafeNumber(diferencia)) <= 2 ? 'DENTRO_DEL_LIMITE' : 'FUERA_DEL_LIMITE' };
-  if (tipoMaterial === 'FOIL PVC') return { estado: toSafeNumber(porcentaje) <= 7 ? 'DENTRO_DEL_LIMITE' : 'FUERA_DEL_LIMITE' };
+  if (tipoMaterial === "FOIL PVC") {
+    const totalRecibido =
+      toSafeNumber(d);
+
+    if (totalRecibido === 0) {
+      return {
+        estado: "PENDIENTE_DE_REVISION",
+      };
+    }
+
+    const limitePermitido =
+      Math.abs(totalRecibido) * 0.07;
+
+    return {
+      estado:
+        Math.abs(toSafeNumber(diferencia)) <=
+        limitePermitido
+          ? "DENTRO_DEL_LIMITE"
+          : "FUERA_DEL_LIMITE",
+    };
+  }
+
+  if (tipoMaterial === "FOIL ALUMINIO") {
+    if (toSafeNumber(d) === 0) {
+      return {
+        estado: "PENDIENTE_DE_REVISION",
+      };
+    }
+
+    return {
+      estado:
+        Math.abs(toSafeNumber(diferencia)) <= 2
+          ? "DENTRO_DEL_LIMITE"
+          : "FUERA_DEL_LIMITE",
+    };
+  }
   if (tipoMaterial === 'TABLETA') return { estado: 'PENDIENTE_DE_REVISION' };
   if (tipoMaterial === 'CAJA PLEGADIZA') return { estado: Math.abs(toSafeNumber(diferencia)) <= toSafeNumber(d) * 0.01 ? 'DENTRO_DEL_LIMITE' : 'FUERA_DEL_LIMITE' };
   if (tipoMaterial === 'CAJA EMPAQUE') return { estado: Math.abs(Number(diferencia)) <= 10 ? 'DENTRO_DEL_LIMITE' : 'FUERA_DEL_LIMITE' };

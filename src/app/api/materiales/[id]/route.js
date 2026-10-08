@@ -22,6 +22,11 @@ import {
   calcularPorcentajeDiferencia,
   calcularTotalRecibido,
   calcularTotalUtilizadoAH,
+  calcularDiferenciaFoil,
+  calcularEFoil,
+  calcularFFoil,
+  calcularTotalFoil,
+  evaluarEstadoMaterial,
 } from "@/lib/calculosMateriales";
 
 const materialFields = [
@@ -455,20 +460,45 @@ export async function PUT(request, { params }) {
         estadoMaterial,
       });
     }
-
     if (nextData.descripcion === "SELLO GARANTÍA") {
-      // Captura manual temporal conforme a valores documentados en la MBR. Pendiente definir el origen automatizado de E, F y G.
+      // Captura manual temporal conforme a valores documentados en la MBR.
+      // Pendiente definir el origen automatizado de E, F y G.
+
       const totalRecibidaD = calcularTotalRecibido(
         nextData.cantidadSurtidaA,
         nextData.cantidadAdicionalB,
         nextData.cantidadDevueltaC,
       );
-      const resultadoE = calcularESelloGarantia(nextData.resultadoE);
-      const resultadoF = calcularFSelloGarantia(nextData.resultadoF);
-      const resultadoG = calcularGSelloGarantia(nextData.resultadoG);
-      const totalUtilizadaH = calcularTotalUtilizadoAH(resultadoE, resultadoF, resultadoG);
-      const diferencia = calcularDiferenciaAH(totalRecibidaD, totalUtilizadaH);
-      const porcentajeDiferencia = calcularPorcentajeDiferencia(totalRecibidaD, diferencia);
+
+      const resultadoE = calcularESelloGarantia(
+        nextData.resultadoE,
+      );
+
+      const resultadoF = calcularFSelloGarantia(
+        nextData.resultadoF,
+      );
+
+      const resultadoG = calcularGSelloGarantia(
+        nextData.resultadoG,
+      );
+
+      const totalUtilizadaH = calcularTotalUtilizadoAH(
+        resultadoE,
+        resultadoF,
+        resultadoG,
+      );
+
+      const diferencia = calcularDiferenciaAH(
+        totalRecibidaD,
+        totalUtilizadaH,
+      );
+
+      const porcentajeDiferencia =
+        calcularPorcentajeDiferencia(
+          totalRecibidaD,
+          diferencia,
+        );
+
       const faltanValores = [
         totalRecibidaD,
         resultadoE,
@@ -477,13 +507,88 @@ export async function PUT(request, { params }) {
         totalUtilizadaH,
         diferencia,
       ].some((value) => value === null);
-      const estadoMaterial = faltanValores
-        ? "CAPTURA_INCOMPLETA"
-        : totalRecibidaD <= 0
-          ? "PENDIENTE_DE_REVISION"
-          : porcentajeDiferencia <= 7
-            ? "DENTRO_DEL_LIMITE"
-            : "FUERA_DEL_LIMITE";
+
+      const { estado: estadoMaterial } =
+        evaluarEstadoMaterial({
+          tipoMaterial: "SELLO GARANTÍA",
+          d: totalRecibidaD,
+          diferencia,
+          porcentaje: porcentajeDiferencia,
+          faltanValores,
+        });
+
+      Object.assign(data, {
+        totalRecibidaD,
+        resultadoE,
+        resultadoF,
+        resultadoG,
+        totalUtilizadaH,
+        diferencia,
+        porcentajeDiferencia,
+        limitePermitido: 7,
+        estadoMaterial,
+      });
+    }
+    
+    if (nextData.descripcion === "FOIL PVC") {
+      const totalRecibidaD = calcularTotalRecibido(
+        nextData.cantidadSurtidaA,
+        nextData.cantidadAdicionalB,
+        nextData.cantidadDevueltaC,
+      );
+
+      // E = Merma pura registrada en la MBR.
+      const resultadoE = calcularEFoil(
+        nextData.resultadoE,
+      );
+
+      // F = Cantidad utilizada real registrada en la MBR.
+      const resultadoF = calcularFFoil(
+        nextData.resultadoF,
+      );
+
+      // G no aplica para FOIL PVC.
+      const resultadoG = null;
+
+      // H = E + F.
+      const totalUtilizadaH = calcularTotalFoil(
+        resultadoE,
+        resultadoF,
+      );
+
+      // Diferencia = D - E - F.
+      const diferencia = calcularDiferenciaFoil(
+        totalRecibidaD,
+        resultadoE,
+        resultadoF,
+      );
+
+      const porcentajeDiferencia =
+        calcularPorcentajeDiferencia(
+          totalRecibidaD,
+          diferencia,
+        );
+
+      const faltanValores = [
+        totalRecibidaD,
+        resultadoE,
+        resultadoF,
+        totalUtilizadaH,
+        diferencia,
+      ].some(
+        (value) =>
+          value === null ||
+          value === undefined,
+      );
+
+      const { estado: estadoMaterial } =
+        evaluarEstadoMaterial({
+          tipoMaterial: "FOIL PVC",
+          d: totalRecibidaD,
+          diferencia,
+          porcentaje: porcentajeDiferencia,
+          faltanValores,
+        });
 
       Object.assign(data, {
         totalRecibidaD,
@@ -498,34 +603,62 @@ export async function PUT(request, { params }) {
       });
     }
 
-    if (nextData.descripcion === "SELLO GARANTÍA") {
-      // Captura manual temporal conforme a valores documentados en la MBR. Pendiente definir el origen automatizado de E, F y G.
+    if (nextData.descripcion ==="FOIL ALUMINIO") {
       const totalRecibidaD = calcularTotalRecibido(
         nextData.cantidadSurtidaA,
         nextData.cantidadAdicionalB,
         nextData.cantidadDevueltaC,
       );
-      const resultadoE = calcularESelloGarantia(nextData.resultadoE);
-      const resultadoF = calcularFSelloGarantia(nextData.resultadoF);
-      const resultadoG = calcularGSelloGarantia(nextData.resultadoG);
-      const totalUtilizadaH = calcularTotalUtilizadoAH(resultadoE, resultadoF, resultadoG);
-      const diferencia = calcularDiferenciaAH(totalRecibidaD, totalUtilizadaH);
-      const porcentajeDiferencia = calcularPorcentajeDiferencia(totalRecibidaD, diferencia);
+
+      // E = Merma pura registrada en la MBR.
+      const resultadoE = calcularEFoil(
+        nextData.resultadoE,
+      );
+
+      // F = Cantidad utilizada real registrada en la MBR.
+      const resultadoF = calcularFFoil(
+        nextData.resultadoF,
+      );
+
+      // G no aplica para FOIL ALUMINIO.
+      const resultadoG = null;
+
+      // H = E + F.
+      const totalUtilizadaH = calcularTotalFoil(
+        resultadoE,
+        resultadoF,
+      );
+
+      // Diferencia = D - E - F.
+      const diferencia = calcularDiferenciaFoil(
+        totalRecibidaD,
+        resultadoE,
+        resultadoF,
+      );
+
       const faltanValores = [
         totalRecibidaD,
         resultadoE,
         resultadoF,
-        resultadoG,
         totalUtilizadaH,
         diferencia,
-      ].some((value) => value === null);
-      const estadoMaterial = faltanValores
-        ? "CAPTURA_INCOMPLETA"
-        : totalRecibidaD <= 0
-          ? "PENDIENTE_DE_REVISION"
-          : porcentajeDiferencia <= 7
-            ? "DENTRO_DEL_LIMITE"
-            : "FUERA_DEL_LIMITE";
+      ].some(
+        (value) =>
+          value === null ||
+          value === undefined,
+      );
+
+      const { estado: estadoMaterial } =
+        evaluarEstadoMaterial({
+          tipoMaterial: "FOIL ALUMINIO",
+          d: totalRecibidaD,
+          diferencia,
+
+          // El porcentaje no aplica para aluminio.
+          porcentaje: null,
+
+          faltanValores,
+        });
 
       Object.assign(data, {
         totalRecibidaD,
@@ -534,11 +667,16 @@ export async function PUT(request, { params }) {
         resultadoG,
         totalUtilizadaH,
         diferencia,
-        porcentajeDiferencia,
-        limitePermitido: 7,
+
+        // En FOIL ALUMINIO no aplica porcentaje.
+        porcentajeDiferencia: null,
+
+        limitePermitido: 2,
         estadoMaterial,
       });
     }
+
+
 
     const material = await prisma.material.update({ where: { id }, data });
     return Response.json(material);

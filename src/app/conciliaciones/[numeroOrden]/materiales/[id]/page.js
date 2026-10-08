@@ -29,6 +29,11 @@ import {
   calcularPorcentajeDiferencia,
   calcularTotalRecibido,
   calcularTotalUtilizadoAH,
+  evaluarEstadoMaterial,
+  calcularDiferenciaFoil,
+  calcularEFoil,
+  calcularFFoil,
+  calcularTotalFoil,
 } from "../../../../../lib/calculosMateriales";
 import { actualizarMaterial, obtenerMaterial } from "../../../../../services/materialesService";
 
@@ -146,11 +151,66 @@ export default function MaterialCapturePage() {
   const isCajaEmpaque = material?.descripcion === "CAJA EMPAQUE";
   const isInstructivo = material?.descripcion === "INSTRUCTIVO";
   const isSelloGarantia = material?.descripcion === "SELLO GARANTÍA";
+  const isFoilPvc = material?.descripcion === "FOIL PVC";
+  const isFoilAluminio =material?.descripcion === "FOIL ALUMINIO";
+  const isFoil = isFoilPvc || isFoilAluminio;
   const normalizedB = isTablet ? 0 : toNumber(values.cantidadAdicionalB);
   const normalizedC = isTablet ? 0 : toNumber(values.cantidadDevueltaC);
   const totalRecibidaD = isCajaPlegadiza || isEtiquetaColectiva || isCajaEmpaque || isInstructivo || isSelloGarantia
     ? calcularTotalRecibido(values.cantidadSurtidaA, values.cantidadAdicionalB, values.cantidadDevueltaC)
     : calcularTotalRecibido(values.cantidadSurtidaA, normalizedB, normalizedC);
+  const foilResultadoE = isFoil
+    ? calcularEFoil(values.resultadoE)
+    : null;
+
+  const foilResultadoF = isFoil
+    ? calcularFFoil(values.resultadoF)
+    : null;
+
+  const foilTotalUtilizadaH = isFoil
+    ? calcularTotalFoil(
+        foilResultadoE,
+        foilResultadoF,
+      )
+    : null;
+
+  const foilDiferencia = isFoil
+    ? calcularDiferenciaFoil(
+        totalRecibidaD,
+        foilResultadoE,
+        foilResultadoF,
+      )
+    : null;
+
+  const foilPorcentajeDiferencia =
+    isFoilPvc
+      ? calcularPorcentajeDiferencia(
+          totalRecibidaD,
+          foilDiferencia,
+        )
+      : null;
+  const foilFaltanValores = isFoil
+    ? [
+        totalRecibidaD,
+        foilResultadoE,
+        foilResultadoF,
+        foilTotalUtilizadaH,
+        foilDiferencia,
+      ].some(
+        (value) =>
+          value === null ||
+          value === undefined,
+      )
+    : true;
+  const foilEstado = isFoil
+    ? evaluarEstadoMaterial({
+        tipoMaterial: material.descripcion,
+        d: totalRecibidaD,
+        diferencia: foilDiferencia,
+        porcentaje: foilPorcentajeDiferencia,
+        faltanValores: foilFaltanValores,
+      }).estado
+    : "CAPTURA_INCOMPLETA";
   const tabletaResultadoE = isTablet
     ? calcularETableta(values.cantidadRealAcondicionada, values.tabletasPorBlister)
     : null;
@@ -432,6 +492,33 @@ export default function MaterialCapturePage() {
           otraMerma: parseNumeroOpcional(values.otraMerma),
           cajasTomadasMuestra: parseNumeroOpcional(values.cajasTomadasMuestra),
         }
+        : isFoil 
+        ?{
+          cantidadSurtidaA:
+            parseNumeroOpcional(
+              values.cantidadSurtidaA,
+            ),
+
+          cantidadAdicionalB:
+            parseNumeroOpcional(
+              values.cantidadAdicionalB,
+            ),
+
+          cantidadDevueltaC:
+            parseNumeroOpcional(
+              values.cantidadDevueltaC,
+            ),
+
+          resultadoE:
+            parseNumeroOpcional(
+              values.resultadoE,
+            ),
+
+          resultadoF:
+            parseNumeroOpcional(
+              values.resultadoF,
+            ),
+        }
         : isEtiquetaColectiva
           ? {
           cantidadSurtidaA: parseNumeroOpcional(values.cantidadSurtidaA),
@@ -573,6 +660,26 @@ export default function MaterialCapturePage() {
       saving={saving}
       onSubmit={handleSubmit}
     />;
+  }
+  if (isFoil) {
+    return (
+      <FoilCaptureForm
+        material={material}
+        numeroOrden={numeroOrden}
+        values={values}
+        updateValue={updateValue}
+        totalRecibida={totalRecibidaD}
+        resultadoE={foilResultadoE}
+        resultadoF={foilResultadoF}
+        totalUtilizada={foilTotalUtilizadaH}
+        diferencia={foilDiferencia}
+        porcentaje={foilPorcentajeDiferencia}
+        estado={foilEstado}
+        error={error}
+        saving={saving}
+        onSubmit={handleSubmit}
+      />
+    );
   }
   
   return (
@@ -982,3 +1089,307 @@ function TabletaCaptureForm({ material, numeroOrden, values, updateValue, totalR
 
   return <div className="app-shell"><Sidebar activeView="inicio" /><main className="main-content"><Header title={`Material: ${material.descripcion}`} description={`Orden ${numeroOrden}`} /><form className="card material-capture-card" onSubmit={onSubmit}><div className="section-heading"><div><h2>Captura de TABLETA</h2><p>{material.codigoSAP} · {material.unidadMedida}</p></div><StatusBadge status={material.estadoMaterial} /></div><div className="capture-grid"><h3>Cantidad recibida</h3><label>A. Cantidad surtida<input type="number" min="0" step="any" value={display(values.cantidadSurtidaA)} onChange={(event) => updateValue("cantidadSurtidaA", event.target.value)} /></label><label>B. Cantidad adicional<input type="number" min="0" step="any" value="0" readOnly /></label><label>C. Cantidad devuelta<input type="number" min="0" step="any" value="0" readOnly /></label><label>D. Total recibida<input className="calculated-field" type="text" value={unit(totalRecibida)} readOnly /></label><h3>Cantidad utilizada E</h3><label>Cantidad real acondicionada<input type="number" min="0" step="any" value={display(values.cantidadRealAcondicionada)} onChange={(event) => updateValue("cantidadRealAcondicionada", event.target.value)} /></label><label>Tabletas por blíster<input type="number" step="1" min="0" value={display(values.tabletasPorBlister)} onChange={(event) => updateValue("tabletasPorBlister", event.target.value)} /></label><label>Operación<input className="calculated-field" value={`${display(values.cantidadRealAcondicionada)} × ${display(values.tabletasPorBlister)}`} readOnly /></label><label>E. Cantidad utilizada<input className="calculated-field" type="text" value={unit(resultadoE)} readOnly /></label><h3>Merma F</h3><label>Telecámara (blísteres)<input type="number" min="0" step="any" value={display(values.telecamara)} onChange={(event) => updateValue("telecamara", event.target.value)} /></label><label>Hermeticidad (blísteres)<input type="number" min="0" step="any" value={display(values.hermeticidad)} onChange={(event) => updateValue("hermeticidad", event.target.value)} /></label><label>Otra merma (tabletas)<input type="number" min="0" step="any" value={display(values.otraMerma)} onChange={(event) => updateValue("otraMerma", event.target.value)} /></label><label>Desglose<input className="calculated-field" value={`${display(values.telecamara)} × ${display(values.tabletasPorBlister)} + ${display(values.hermeticidad)} × ${display(values.tabletasPorBlister)} + ${display(values.otraMerma)}`} readOnly /></label><label>F. Merma total<input className="calculated-field" type="text" value={unit(resultadoF)} readOnly /></label><h3>Muestra G</h3><label>Cajas tomadas como muestra<input type="number" min="0" step="any" value={display(values.cajasTomadasMuestra)} onChange={(event) => updateValue("cajasTomadasMuestra", event.target.value)} /></label><label>Operación<input className="calculated-field" value={`${display(values.cajasTomadasMuestra)} × ${display(values.tabletasPorBlister)}`} readOnly /></label><label>G. Cantidad de muestra<input className="calculated-field" type="text" value={unit(resultadoG)} readOnly /></label><h3>Resultado final</h3><label>H. Total utilizada<input className="calculated-field" type="text" value={unit(totalUtilizada)} readOnly /></label><label>Diferencia<input className="calculated-field" type="text" value={diferencia === "" ? "" : `${diferencia} PZA`} readOnly /></label><label>Porcentaje<input className="calculated-field" type="text" value={porcentaje === "" ? "" : `${porcentaje} %`} readOnly /></label></div>{error && <p className="field-error">{error}</p>}<div className="button-row"><button className="button primary" type="submit" disabled={saving}>{saving ? "Guardando..." : "Guardar captura"}</button><Link className="button secondary" href={`/conciliaciones/${numeroOrden}`}>Cancelar</Link></div></form></main></div>;
 }
+
+function FoilCaptureForm({
+  material,
+  numeroOrden,
+  values,
+  updateValue,
+  totalRecibida,
+  resultadoE,
+  resultadoF,
+  totalUtilizada,
+  diferencia,
+  porcentaje,
+  estado,
+  error,
+  saving,
+  onSubmit,
+}) {
+  const isFoilPvc =
+    material.descripcion === "FOIL PVC";
+
+  function formatKilograms(value) {
+    if (
+      value === null ||
+      value === undefined ||
+      value === ""
+    ) {
+      return "Pendiente";
+    }
+
+    return `${Number(value).toLocaleString(
+      "es-MX",
+      {
+        minimumFractionDigits: 0,
+        maximumFractionDigits: 3,
+      },
+    )} kg`;
+  }
+
+  function formatPercentage(value) {
+    if (
+      value === null ||
+      value === undefined ||
+      value === ""
+    ) {
+      return totalRecibida === 0
+        ? "No calculable"
+        : "Pendiente";
+    }
+
+    return `${Number(value).toFixed(2)} %`;
+  }
+
+  const limite = isFoilPvc
+    ? "± 7.00 %"
+    : "± 2.000 kg";
+
+  const porcentajeVisible = isFoilPvc
+    ? formatPercentage(porcentaje)
+    : "No aplica";
+
+  return (
+    <div className="app-shell">
+      <Sidebar activeView="inicio" />
+
+      <main className="main-content">
+        <Header
+          title={`Material: ${material.descripcion}`}
+          description={`Orden ${numeroOrden}`}
+        />
+
+        <form
+          className="card material-capture-card"
+          onSubmit={onSubmit}
+        >
+          <div className="section-heading">
+            <div>
+              <h2>Captura de cantidades</h2>
+
+              <p>
+                {material.codigoSAP}
+                {" · "}
+                {material.unidadMedida}
+              </p>
+            </div>
+
+            <StatusBadge status={estado} />
+          </div>
+
+          <div className="alert info-alert">
+            <div className="alert-symbol">
+              i
+            </div>
+
+            <div>
+              Las muestras no se capturan como un
+              valor independiente para este material.
+            </div>
+          </div>
+
+          <div className="capture-grid">
+            <label>
+              A. Cantidad surtida
+
+              <input
+                type="number"
+                min="0"
+                step="0.001"
+                value={
+                  values.cantidadSurtidaA ?? ""
+                }
+                onChange={(event) =>
+                  updateValue(
+                    "cantidadSurtidaA",
+                    event.target.value,
+                  )
+                }
+              />
+
+              <small>kg</small>
+            </label>
+
+            <label>
+              B. Cantidad adicional
+
+              <input
+                type="number"
+                min="0"
+                step="0.001"
+                value={
+                  values.cantidadAdicionalB ?? ""
+                }
+                onChange={(event) =>
+                  updateValue(
+                    "cantidadAdicionalB",
+                    event.target.value,
+                  )
+                }
+              />
+
+              <small>kg</small>
+            </label>
+
+            <label>
+              C. Cantidad devuelta
+
+              <input
+                type="number"
+                min="0"
+                step="0.001"
+                value={
+                  values.cantidadDevueltaC ?? ""
+                }
+                onChange={(event) =>
+                  updateValue(
+                    "cantidadDevueltaC",
+                    event.target.value,
+                  )
+                }
+              />
+
+              <small>kg</small>
+            </label>
+
+            <label>
+              D. Total surtido
+
+              <input
+                className="calculated-field"
+                type="text"
+                value={formatKilograms(
+                  totalRecibida,
+                )}
+                readOnly
+              />
+            </label>
+
+            <label>
+              E. Merma pura según MBR
+
+              <input
+                type="number"
+                min="0"
+                step="0.001"
+                value={values.resultadoE ?? ""}
+                onChange={(event) =>
+                  updateValue(
+                    "resultadoE",
+                    event.target.value,
+                  )
+                }
+              />
+
+              <small>kg</small>
+            </label>
+
+            <label>
+              F. Cantidad utilizada real según MBR
+
+              <input
+                type="number"
+                min="0"
+                step="0.001"
+                value={values.resultadoF ?? ""}
+                onChange={(event) =>
+                  updateValue(
+                    "resultadoF",
+                    event.target.value,
+                  )
+                }
+              />
+
+              <small>kg</small>
+            </label>
+
+            <label>
+              G. Muestras
+
+              <input
+                className="calculated-field"
+                type="text"
+                value="No aplica"
+                readOnly
+              />
+            </label>
+
+            <label>
+              H. Total conciliado
+
+              <input
+                className="calculated-field"
+                type="text"
+                value={formatKilograms(
+                  totalUtilizada,
+                )}
+                readOnly
+              />
+            </label>
+
+            <label>
+              Diferencia D - E - F
+
+              <input
+                className="calculated-field"
+                type="text"
+                value={formatKilograms(
+                  diferencia,
+                )}
+                readOnly
+              />
+            </label>
+
+            <label>
+              Porcentaje de diferencia
+
+              <input
+                className="calculated-field"
+                type="text"
+                value={porcentajeVisible}
+                readOnly
+              />
+            </label>
+
+            <label>
+              Límite permitido
+
+              <input
+                className="calculated-field"
+                type="text"
+                value={limite}
+                readOnly
+              />
+            </label>
+          </div>
+
+          {error && (
+            <p className="field-error">
+              {error}
+            </p>
+          )}
+
+          <div className="button-row">
+            <button
+              className="button primary"
+              type="submit"
+              disabled={saving}
+            >
+              {saving
+                ? "Guardando..."
+                : "Guardar captura"}
+            </button>
+
+            <Link
+              className="button secondary"
+              href={`/conciliaciones/${numeroOrden}`}
+            >
+              Cancelar
+            </Link>
+          </div>
+        </form>
+      </main>
+    </div>
+  );
+}
+

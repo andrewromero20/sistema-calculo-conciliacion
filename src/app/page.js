@@ -1,70 +1,35 @@
 "use client";
 
+import { useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
-import Header from "./components/layout/Header";
-import Sidebar from "./components/layout/Sidebar";
-import InfoCard from "./components/conciliaciones/InfoCard";
-import RecentTable from "./components/conciliaciones/RecentTable";
-import ResultMessage from "./components/conciliaciones/ResultMessage";
-import SearchCard from "./components/conciliaciones/SearchCard";
-import {
-  crearConciliacion,
-  obtenerConciliacionPorNumeroOrden,
-  obtenerConciliaciones,
-} from "../services/conciliacionesService";
 
-export default function Home() {
+export default function RootHomePage() {
   const router = useRouter();
-  const [order, setOrder] = useState("");
-  const [error, setError] = useState("");
-  const [result, setResult] = useState(null);
-  const [selected, setSelected] = useState(null);
-  const [reconciliations, setReconciliations] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [loadError, setLoadError] = useState("");
 
   useEffect(() => {
-    obtenerConciliaciones()
-      .then(setReconciliations)
-      .catch(() => setLoadError("No fue posible cargar las conciliaciones."))
-      .finally(() => setLoading(false));
-  }, []);
+    fetch("/api/auth/me")
+      .then((res) => {
+        if (!res.ok) throw new Error("No autenticado");
+        return res.json();
+      })
+      .then((data) => {
+        if (data?.user?.rol === "USER_SE") {
+          router.replace("/se");
+        } else {
+          router.replace("/pt");
+        }
+      })
+      .catch(() => {
+        router.replace("/login");
+      });
+  }, [router]);
 
-  useEffect(() => {
-    console.log(reconciliations);
-  }, [reconciliations]);
-
-  async function handleSearch(event) {
-    event.preventDefault();
-    if (!order) { setError("Ingresa un número de orden para continuar."); setResult(null); return; }
-    if (!/^\d+$/.test(order)) { setError("El número de orden solo debe contener números, sin espacios."); setResult(null); return; }
-    setError("");
-    try {
-      const match = await obtenerConciliacionPorNumeroOrden(order);
-      setResult(match ? { match } : { order });
-      setSelected(match);
-    } catch {
-      setError("No fue posible buscar la conciliación.");
-      setResult(null);
-      setSelected(null);
-    }
-  }
-
-  function openRecord(record) {
-    if (!record) { router.push("/historial"); return; }
-    router.push(`/conciliaciones/${record.numeroOrden}`);
-  }
-
-  async function createReconciliation() {
-    if (!result?.order) return;
-    try {
-      await crearConciliacion(result.order);
-      router.push(`/conciliaciones/${result.order}`);
-    } catch (creationError) {
-      setError(creationError.message);
-    }
-  }
-
-  return <div className="app-shell"><Sidebar activeView="inicio" /><main className="main-content"><Header />{loading && <p>Cargando conciliaciones...</p>}{loadError && <div className="alert info-alert"><div className="alert-symbol">i</div><div>{loadError}</div></div>}<div className="dashboard-grid"><div><SearchCard order={order} setOrder={setOrder} onSearch={handleSearch} onNew={() => router.push("/conciliaciones/nueva")} error={error} /><ResultMessage result={result} onCreate={createReconciliation} onOpen={openRecord} /></div><InfoCard reconciliation={selected} /></div><RecentTable reconciliations={reconciliations} onOpen={openRecord} /></main></div>;
+  return (
+    <div className="min-h-screen bg-slate-50 flex flex-col items-center justify-center p-4">
+      <div className="w-10 h-10 border-4 border-blue-600 border-t-transparent rounded-full animate-spin mb-3"></div>
+      <p className="text-xs font-semibold text-slate-600">
+        Cargando sistema de conciliación...
+      </p>
+    </div>
+  );
 }

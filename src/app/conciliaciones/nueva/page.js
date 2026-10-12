@@ -62,5 +62,5 @@ export default function NewReconciliationPage() {
   }
 }
 
-  return <div className="app-shell"><Sidebar activeView="nueva" /><main className="main-content"><Header title="Nueva conciliación" description="Captura el número de orden para iniciar una conciliación." /><div className="dashboard-grid"><div><SearchCard order={order} setOrder={setOrder} onSearch={handleSearch} onNew={() => router.push("/")} error={error} /><ResultMessage result={result} onCreate={createReconciliation} onOpen={(record) => router.push(`/conciliaciones/${record.numeroOrden}`)} /></div></div></main></div>;
+  return <div className="app-shell"><Sidebar activeView="pt-nueva" /><main className="main-content"><Header title="Nueva conciliación" description="Captura el número de orden para iniciar una conciliación." /><div className="dashboard-grid"><div><SearchCard order={order} setOrder={setOrder} onSearch={handleSearch} onNew={() => router.push("/pt")} error={error} /><ResultMessage result={result} onCreate={createReconciliation} onOpen={(record) => router.push(`/conciliaciones/${record.numeroOrden}`)} /></div></div></main></div>;
 }

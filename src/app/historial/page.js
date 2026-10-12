@@ -18,5 +18,5 @@ export default function HistoryPage() {
       .catch(() => setLoadError("No fue posible cargar las conciliaciones."));
   }, []);
 
-  return <div className="app-shell"><Sidebar activeView="historial" /><main className="main-content"><Header title="Historial" description="Consulta las conciliaciones registradas y sus últimos cambios." />{loadError && <div className="alert info-alert"><div className="alert-symbol">i</div><div>{loadError}</div></div>}<RecentTable reconciliations={reconciliations} onOpen={(record) => router.push(record ? `/conciliaciones/${record.numeroOrden}` : "/historial")} /></main></div>;
+  return <div className="app-shell"><Sidebar activeView="pt-historial" /><main className="main-content"><Header title="Historial" description="Consulta las conciliaciones registradas y sus últimos cambios." />{loadError && <div className="alert info-alert"><div className="alert-symbol">i</div><div>{loadError}</div></div>}<RecentTable reconciliations={reconciliations} onOpen={(record) => router.push(record ? `/conciliaciones/${record.numeroOrden}` : "/historial")} /></main></div>;
 }

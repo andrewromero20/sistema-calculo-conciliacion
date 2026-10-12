@@ -1,9 +1,6 @@
 // This is your Prisma schema file,
 // learn more about it in the docs: https://pris.ly/d/prisma-schema
 
-// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
-// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
-
 generator client {
   provider = "prisma-client-js"
 }
@@ -13,9 +10,77 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+enum Role {
+  USER_SE
+  USER_PT
+  ADMIN
+}
+
+model Usuario {
+  id             Int           @id @default(autoincrement())
+  nombre         String
+  email          String        @unique
+  password       String
+  rol            Role          @default(USER_SE)
+  fechaCreacion  DateTime      @default(now())
+  registrosSE    RegistroSE[]
+  auditoriasSE   AuditoriaSE[]
+}
+
+model RegistroSE {
+  ordenGranel                String        @id
+  lote                       String        @unique
+  codigoMaterial             String
+  producto                   String
+  tamanoLoteEstandar         Decimal
+  supervisorPreparacion      String
+  supervisorTabRecub         String
+  pesoNetoTotalTabletas      Decimal
+  pesoPromedio               Decimal
+  cantPzasCargarSap          Decimal
+  cantPzasAcondicionar       Decimal
+  muestrasTabRecub           Decimal
+  rendimientoTab             Decimal
+  ctecGranelSap              String
+  fechaInicioTableteado      DateTime
+  fechaFinTableteado         DateTime
+  fechaInicioRecubrimiento   DateTime
+  fechaFinPrimeraCarga       DateTime
+  fechaFinRecubrimiento      DateTime
+  
+  creadoPorId                Int
+  creadoPor                  Usuario       @relation(fields: [creadoPorId], references: [id])
+  fechaCreacion              DateTime      @default(now())
+  pesos                      PesoSE[]
+  auditorias                 AuditoriaSE[]
+  conciliaciones             Conciliacion[]
+}
+
+model PesoSE {
+  id               Int        @id @default(autoincrement())
+  registroSeOrden  String
+  registroSE       RegistroSE @relation(fields: [registroSeOrden], references: [ordenGranel], onDelete: Cascade)
+  pesoBruto        Decimal
+  pesoTara         Decimal
+  pesoNeto         Decimal
+}
+
+model AuditoriaSE {
+  id                Int        @id @default(autoincrement())
+  registroSeOrden   String
+  registroSE        RegistroSE @relation(fields: [registroSeOrden], references: [ordenGranel], onDelete: Cascade)
+  usuarioId         Int
+  usuario           Usuario    @relation(fields: [usuarioId], references: [id])
+  fechaModificacion DateTime   @default(now())
+  cambios           Json
+  justificacion     String     @db.Text
+}
+
 model Conciliacion {
   id                 Int               @id @default(autoincrement())
   numeroOrden        String            @unique
+  ordenGranel        String?
+  registroSE         RegistroSE?       @relation(fields: [ordenGranel], references: [ordenGranel])
   estadoConciliacion String
   fechaCreacion      DateTime          @default(now())
   fechaActualizacion DateTime          @updatedAt

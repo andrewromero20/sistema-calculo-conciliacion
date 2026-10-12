@@ -1,0 +1,175 @@
+{
+  "registros": [
+    {
+      "ordenGranel": "OG-964384",
+      "lote": "65etrstr",
+      "codigoMaterial": "82190",
+      "producto": "Metformina 850mg Tableteado",
+      "tamanoLoteEstandar": 180,
+      "supervisorPreparacion": "Ing. Alejandro Torres",
+      "supervisorTabRecub": "Q.F.B. Patricia Herrera",
+      "pesoNetoTotalTabletas": 32,
+      "pesoPromedio": 30,
+      "cantPzasCargarSap": 435,
+      "cantPzasAcondicionar": 5656,
+      "muestrasTabRecub": 577,
+      "rendimientoTab": 1.5,
+      "ctecGranelSap": "445",
+      "fechaInicioTableteado": "2026-10-12T20:08:00.000Z",
+      "fechaFinTableteado": "2026-10-12T20:08:00.000Z",
+      "fechaInicioRecubrimiento": "2026-10-12T20:08:00.000Z",
+      "fechaFinPrimeraCarga": "2026-10-12T20:08:00.000Z",
+      "fechaFinRecubrimiento": "2026-10-12T20:09:00.000Z",
+      "creadoPorId": 1,
+      "fechaCreacion": "2026-10-12T20:09:11.563Z",
+      "fechaActualizacion": "2026-10-12T20:09:11.563Z",
+      "pesos": [
+        {
+          "id": 1,
+          "registroSeOrden": "OG-964384",
+          "pesoBruto": 45,
+          "pesoTara": 22,
+          "pesoNeto": 23
+        },
+        {
+          "id": 2,
+          "registroSeOrden": "OG-964384",
+          "pesoBruto": 76,
+          "pesoTara": 67,
+          "pesoNeto": 9
+        }
+      ],
+      "auditorias": []
+    },
+    {
+      "ordenGranel": "OG-964380",
+      "lote": "L-4380",
+      "codigoMaterial": "MAT-IBU-400",
+      "producto": "Ibuprofeno 400mg Granel",
+      "tamanoLoteEstandar": 155,
+      "supervisorPreparacion": "Ing. Carlos Mendoza (Modificado)",
+      "supervisorTabRecub": "Ing. Sofía Valdés",
+      "pesoNetoTotalTabletas": 100.1,
+      "pesoPromedio": 0.42,
+      "cantPzasCargarSap": 238333,
+      "cantPzasAcondicionar": 235000,
+      "muestrasTabRecub": 300,
+      "rendimientoTab": 99.8,
+      "ctecGranelSap": "CTEC-GR-9988",
+      "fechaInicioTableteado": "2026-10-09T02:29:24.380Z",
+      "fechaFinTableteado": "2026-10-09T07:29:24.380Z",
+      "fechaInicioRecubrimiento": "2026-10-09T12:29:24.380Z",
+      "fechaFinPrimeraCarga": "2026-10-09T14:29:24.380Z",
+      "fechaFinRecubrimiento": "2026-10-09T20:29:24.380Z",
+      "creadoPorId": 1,
+      "fechaCreacion": "2026-10-09T22:29:28.490Z",
+      "fechaActualizacion": "2026-10-09T22:29:40.762Z",
+      "pesos": [
+        {
+          "id": 1,
+          "registroSeOrden": "OG-964380",
+          "pesoBruto": 52.5,
+          "pesoTara": 2.1,
+          "pesoNeto": 50.4
+        },
+        {
+          "id": 2,
+          "registroSeOrden": "OG-964380",
+          "pesoBruto": 51.8,
+          "pesoTara": 2.1,
+          "pesoNeto": 49.7
+        }
+      ],
+      "auditorias": [
+        {
+          "id": 1,
+          "registroSeOrden": "OG-964380",
+          "usuarioId": 1,
+          "fechaModificacion": "2026-10-09T22:29:40.762Z",
+          "cambios": {
+            "tamanoLoteEstandar": {
+              "anterior": 150,
+              "nuevo": 155
+            },
+            "supervisorPreparacion": {
+              "anterior": "Ing. Carlos Mendoza",
+              "nuevo": "Ing. Carlos Mendoza (Modificado)"
+            },
+            "rendimientoTab": {
+              "anterior": 99.2,
+              "nuevo": 99.8
+            }
+          },
+          "justificacion": "Se actualiza el supervisor responsable tras relevo de turno y ajuste de rendimiento final.",
+          "usuario": {
+            "id": 1,
+            "nombre": "Usuario Actual",
+            "email": "usuario@empresa.com"
+          }
+        }
+      ]
+    },
+    {
+      "ordenGranel": "OG-900142",
+      "lote": "L-2601",
+      "codigoMaterial": "MAT-TAB-500",
+      "producto": "Paracetamol 500mg Granel Tableteado",
+      "tamanoLoteEstandar": 250,
+      "supervisorPreparacion": "Ing. Roberto Domínguez",
+      "supervisorTabRecub": "Ing. Laura Méndez",
+      "pesoNetoTotalTabletas": 248.5,
+      "pesoPromedio": 0.52,
+      "cantPzasCargarSap": 477884,
+      "cantPzasAcondicionar": 475000,
+      "muestrasTabRecub": 500,
+      "rendimientoTab": 99.4,
+      "ctecGranelSap": "CTEC-GR-0142",
+      "fechaInicioTableteado": "2026-10-07T22:29:28.486Z",
+      "fechaFinTableteado": "2026-10-08T10:29:28.487Z",
+      "fechaInicioRecubrimiento": "2026-10-08T16:29:28.487Z",
+      "fechaFinPrimeraCarga": "2026-10-09T02:29:28.487Z",
+      "fechaFinRecubrimiento": "2026-10-09T10:29:28.487Z",
+      "creadoPorId": 1,
+      "fechaCreacion": "2026-10-07T20:29:28.487Z",
+      "fechaActualizacion": "2026-10-07T20:29:28.487Z",
+      "pesos": [
+        {
+          "id": 1,
+          "registroSeOrden": "OG-900142",
+          "pesoBruto": 52.4,
+          "pesoTara": 2.1,
+          "pesoNeto": 50.3
+        },
+        {
+          "id": 2,
+          "registroSeOrden": "OG-900142",
+          "pesoBruto": 51.9,
+          "pesoTara": 2.1,
+          "pesoNeto": 49.8
+        },
+        {
+          "id": 3,
+          "registroSeOrden": "OG-900142",
+          "pesoBruto": 51.5,
+          "pesoTara": 2.1,
+          "pesoNeto": 49.4
+        },
+        {
+          "id": 4,
+          "registroSeOrden": "OG-900142",
+          "pesoBruto": 51.7,
+          "pesoTara": 2.1,
+          "pesoNeto": 49.6
+        },
+        {
+          "id": 5,
+          "registroSeOrden": "OG-900142",
+          "pesoBruto": 51.5,
+          "pesoTara": 2.1,
+          "pesoNeto": 49.4
+        }
+      ],
+      "auditorias": []
+    }
+  ]
+}

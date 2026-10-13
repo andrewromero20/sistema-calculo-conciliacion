@@ -1,10 +1,20 @@
 "use client";
 
 import {
+  calcularDiferenciaFoil,
+  calcularEFoil,
+  calcularFFoil,
+  calcularPorcentajeDiferencia,
+  calcularTotalFoil,
+  calcularTotalRecibido,
+  evaluarEstadoMaterial,
+} from "../../../lib/calculosMateriales";
+
+import {
   useMemo,
   useState,
 } from "react";
-import { crearMaterial } from "../../../services/materialesService";
+import { crearMaterial, actualizarMaterial } from "../../../services/materialesService";
 import {
   MATERIAL_DEFINITIONS,
   getMaterialDefinition,
@@ -14,6 +24,173 @@ function normalizeFormValue(value) {
     value === undefined
     ? ""
     : value;
+}
+
+function parseOptionalNumber(value) {
+  if (
+    value === "" ||
+    value === null ||
+    value === undefined
+  ) {
+    return null;
+  }
+
+  const number = Number(value);
+
+  return Number.isFinite(number)
+    ? number
+    : null;
+}
+
+function formatQuantity(value, unit = "") {
+  if (
+    value === null ||
+    value === undefined
+  ) {
+    return "Pendiente";
+  }
+
+  const formatted = Number(value).toLocaleString(
+    "es-MX",
+    {
+      minimumFractionDigits: 0,
+      maximumFractionDigits: 3,
+    },
+  );
+
+  return unit
+    ? `${formatted} ${unit}`
+    : formatted;
+}
+
+function formatPercentage(value, totalRecibido) {
+  if (
+    value === null ||
+    value === undefined
+  ) {
+    return totalRecibido === 0
+      ? "No calculable"
+      : "Pendiente";
+  }
+
+  return `${Number(value).toFixed(2)} %`;
+}
+
+function formatMaterialStatus(status) {
+  const labels = {
+    CAPTURA_INCOMPLETA:
+      "Captura incompleta",
+    PENDIENTE_DE_REVISION:
+      "Pendiente de revisión",
+    DENTRO_DEL_LIMITE:
+      "Dentro del límite",
+    FUERA_DEL_LIMITE:
+      "Fuera del límite",
+  };
+
+  return labels[status] ?? status;
+}
+
+function calculateFoilPvcPreview(draft) {
+  if (!draft) {
+    return {
+      totalRecibidaD: null,
+      resultadoE: null,
+      resultadoF: null,
+      resultadoG: null,
+      totalUtilizadaH: null,
+      diferencia: null,
+      porcentajeDiferencia: null,
+      limitePermitido: 7,
+      estadoMaterial:
+        "CAPTURA_INCOMPLETA",
+    };
+  }
+
+  const cantidadSurtidaA =
+    parseOptionalNumber(
+      draft.cantidadSurtidaA,
+    );
+
+  const cantidadAdicionalB =
+    parseOptionalNumber(
+      draft.cantidadAdicionalB,
+    );
+
+  const cantidadDevueltaC =
+    parseOptionalNumber(
+      draft.cantidadDevueltaC,
+    );
+
+  const totalRecibidaD =
+    calcularTotalRecibido(
+      cantidadSurtidaA,
+      cantidadAdicionalB,
+      cantidadDevueltaC,
+    );
+
+  const resultadoE = calcularEFoil(
+    parseOptionalNumber(draft.resultadoE),
+  );
+
+  const resultadoF = calcularFFoil(
+    parseOptionalNumber(draft.resultadoF),
+  );
+
+  const resultadoG = null;
+
+  const totalUtilizadaH =
+    calcularTotalFoil(
+      resultadoE,
+      resultadoF,
+    );
+
+  const diferencia =
+    calcularDiferenciaFoil(
+      totalRecibidaD,
+      resultadoE,
+      resultadoF,
+    );
+
+  const porcentajeDiferencia =
+    calcularPorcentajeDiferencia(
+      totalRecibidaD,
+      diferencia,
+    );
+
+  const faltanValores = [
+    totalRecibidaD,
+    resultadoE,
+    resultadoF,
+    totalUtilizadaH,
+    diferencia,
+  ].some(
+    (value) =>
+      value === null ||
+      value === undefined,
+  );
+
+  const { estado: estadoMaterial } =
+    evaluarEstadoMaterial({
+      tipoMaterial: "FOIL PVC",
+      d: totalRecibidaD,
+      diferencia,
+      porcentaje:
+        porcentajeDiferencia,
+      faltanValores,
+    });
+
+  return {
+    totalRecibidaD,
+    resultadoE,
+    resultadoF,
+    resultadoG,
+    totalUtilizadaH,
+    diferencia,
+    porcentajeDiferencia,
+    limitePermitido: 7,
+    estadoMaterial,
+  };
 }
 
 function createMaterialDraft(material) {
@@ -103,10 +280,37 @@ function createInitialDrafts(materials) {
     ]),
   );
 }
+
+function MatrixNumberInput({
+  value,
+  onChange,
+  unit,
+  disabled = false,
+}) {
+  return (
+    <div className="matrix-input-wrapper">
+      <input
+        className="matrix-input"
+        type="number"
+        min="0"
+        step={unit === "kg" ? "0.001" : "1"}
+        value={value ?? ""}
+        disabled={disabled}
+        onChange={(event) =>
+          onChange(event.target.value)
+        }
+      />
+
+      {unit && <small>{unit}</small>}
+    </div>
+  );
+}
+
 export default function MaterialsCaptureMatrix({
   materials = [],
   numeroOrden,
   onMaterialCreated,
+  onMaterialUpdated,
 }) {
   const [showAddForm, setShowAddForm] =
     useState(false);
@@ -122,6 +326,10 @@ export default function MaterialsCaptureMatrix({
   const [drafts, setDrafts] = useState(
   () => createInitialDrafts(materials),
 );
+
+const [savingMaterialIds, setSavingMaterialIds,] = useState({});
+
+const [ materialMessages,setMaterialMessages,] = useState({});
 
   const existingDescriptions = useMemo(
     () =>
@@ -214,6 +422,92 @@ export default function MaterialsCaptureMatrix({
     }));
 
     setError("");
+    }
+
+    async function saveFoilPvc(material) {
+        const draft = drafts[material.id];
+
+        if (!draft) {
+            return;
+        }
+
+        const payload = {
+            cantidadSurtidaA:
+            parseOptionalNumber(
+                draft.cantidadSurtidaA,
+            ),
+
+            cantidadAdicionalB:
+            parseOptionalNumber(
+                draft.cantidadAdicionalB,
+            ),
+
+            cantidadDevueltaC:
+            parseOptionalNumber(
+                draft.cantidadDevueltaC,
+            ),
+
+            resultadoE:
+            parseOptionalNumber(
+                draft.resultadoE,
+            ),
+
+            resultadoF:
+            parseOptionalNumber(
+                draft.resultadoF,
+            ),
+        };
+
+        setSavingMaterialIds((current) => ({
+            ...current,
+            [material.id]: true,
+        }));
+
+        setMaterialMessages((current) => ({
+            ...current,
+            [material.id]: "",
+        }));
+
+        try {
+            const updatedMaterial =
+            await actualizarMaterial(
+                material.id,
+                payload,
+            );
+
+            setDrafts((currentDrafts) => ({
+            ...currentDrafts,
+            [material.id]:
+                createMaterialDraft(
+                updatedMaterial,
+                ),
+            }));
+
+            onMaterialUpdated?.(
+            updatedMaterial,
+            );
+
+            setMaterialMessages((current) => ({
+            ...current,
+            [material.id]:
+                "Guardado correctamente.",
+            }));
+        } catch (saveError) {
+            setMaterialMessages((current) => ({
+            ...current,
+            [material.id]:
+                saveError instanceof Error
+                ? saveError.message
+                : "No fue posible guardar.",
+            }));
+        } finally {
+            setSavingMaterialIds(
+            (current) => ({
+                ...current,
+                [material.id]: false,
+            }),
+            );
+        }
     }
 
   return (
@@ -385,63 +679,157 @@ export default function MaterialsCaptureMatrix({
                   Cantidad recibida
                 </td>
               </tr>
+                <tr>
+                    <th className="matrix-concept-column">
+                        A. Cantidad surtida
+                    </th>
+
+                    {materials.map((material) => {
+                        const isFoilPvc =
+                        material.descripcion === "FOIL PVC";
+
+                        const draft = drafts[material.id];
+
+                        return (
+                        <td key={material.id}>
+                            {isFoilPvc ? (
+                            <MatrixNumberInput
+                                value={
+                                draft?.cantidadSurtidaA ?? ""
+                                }
+                                unit="kg"
+                                onChange={(value) =>
+                                updateDraft(
+                                    material.id,
+                                    "cantidadSurtidaA",
+                                    value,
+                                )
+                                }
+                            />
+                            ) : (
+                            formatQuantity(
+                                material.cantidadSurtidaA,
+                                material.unidadMedida,
+                            )
+                            )}
+                        </td>
+                        );
+                    })}
+                    </tr>
+              <tr>
+                <th className="matrix-concept-column">
+                    B. Cantidad adicional
+                </th>
+
+                {materials.map((material) => {
+                    const isFoilPvc =
+                    material.descripcion === "FOIL PVC";
+
+                    const draft = drafts[material.id];
+
+                    return (
+                    <td key={material.id}>
+                        {isFoilPvc ? (
+                        <MatrixNumberInput
+                            value={
+                            draft?.cantidadAdicionalB ?? ""
+                            }
+                            unit="kg"
+                            onChange={(value) =>
+                            updateDraft(
+                                material.id,
+                                "cantidadAdicionalB",
+                                value,
+                            )
+                            }
+                        />
+                        ) : material.descripcion ===
+                        "TABLETA" ? (
+                        "0"
+                        ) : (
+                        formatQuantity(
+                            material.cantidadAdicionalB,
+                            material.unidadMedida,
+                        )
+                        )}
+                    </td>
+                    );
+                })}
+                </tr>
 
               <tr>
                 <th className="matrix-concept-column">
-                  A. Cantidad surtida
+                    C. Cantidad devuelta
                 </th>
 
-                {materials.map((material) => (
-                  <td key={material.id}>
-                    Pendiente
-                  </td>
-                ))}
-              </tr>
+                {materials.map((material) => {
+                    const isFoilPvc =
+                    material.descripcion === "FOIL PVC";
+
+                    const draft = drafts[material.id];
+
+                    return (
+                    <td key={material.id}>
+                        {isFoilPvc ? (
+                        <MatrixNumberInput
+                            value={
+                            draft?.cantidadDevueltaC ?? ""
+                            }
+                            unit="kg"
+                            onChange={(value) =>
+                            updateDraft(
+                                material.id,
+                                "cantidadDevueltaC",
+                                value,
+                            )
+                            }
+                        />
+                        ) : material.descripcion ===
+                        "TABLETA" ? (
+                        "0"
+                        ) : (
+                        formatQuantity(
+                            material.cantidadDevueltaC,
+                            material.unidadMedida,
+                        )
+                        )}
+                    </td>
+                    );
+                })}
+                </tr>
 
               <tr>
                 <th className="matrix-concept-column">
-                  B. Cantidad adicional
+                    D. Total recibido
                 </th>
 
-                {materials.map((material) => (
-                  <td key={material.id}>
-                    {material.descripcion ===
-                    "TABLETA"
-                      ? "0"
-                      : "Pendiente"}
-                  </td>
-                ))}
-              </tr>
+                {materials.map((material) => {
+                    const isFoilPvc =
+                    material.descripcion === "FOIL PVC";
 
-              <tr>
-                <th className="matrix-concept-column">
-                  C. Cantidad devuelta
-                </th>
+                    const preview = isFoilPvc
+                    ? calculateFoilPvcPreview(
+                        drafts[material.id],
+                        )
+                    : null;
 
-                {materials.map((material) => (
-                  <td key={material.id}>
-                    {material.descripcion ===
-                    "TABLETA"
-                      ? "0"
-                      : "Pendiente"}
-                  </td>
-                ))}
-              </tr>
+                    const value = isFoilPvc
+                    ? preview.totalRecibidaD
+                    : material.totalRecibidaD;
 
-              <tr>
-                <th className="matrix-concept-column">
-                  D. Total recibido
-                </th>
-
-                {materials.map((material) => (
-                  <td
-                    key={material.id}
-                    className="matrix-calculated-cell"
-                  >
-                    Pendiente
-                  </td>
-                ))}
-              </tr>
+                    return (
+                    <td
+                        key={material.id}
+                        className="matrix-calculated-cell"
+                    >
+                        {formatQuantity(
+                        value,
+                        material.unidadMedida,
+                        )}
+                    </td>
+                    );
+                })}
+                </tr>
             </tbody>
           </table>
         </div>

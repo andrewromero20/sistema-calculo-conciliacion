@@ -91,7 +91,7 @@ function formatMaterialStatus(status) {
   return labels[status] ?? status;
 }
 
-function calculateFoilPvcPreview(draft) {
+function calculateFoilPreview(material, draft) {
   if (!draft) {
     return {
       totalRecibidaD: null,
@@ -101,32 +101,25 @@ function calculateFoilPvcPreview(draft) {
       totalUtilizadaH: null,
       diferencia: null,
       porcentajeDiferencia: null,
-      limitePermitido: 7,
-      estadoMaterial:
-        "CAPTURA_INCOMPLETA",
+      limitePermitido:
+        material.descripcion === "FOIL PVC"
+          ? 7
+          : 2,
+      estadoMaterial: "CAPTURA_INCOMPLETA",
     };
   }
 
-  const cantidadSurtidaA =
-    parseOptionalNumber(
-      draft.cantidadSurtidaA,
-    );
-
-  const cantidadAdicionalB =
-    parseOptionalNumber(
-      draft.cantidadAdicionalB,
-    );
-
-  const cantidadDevueltaC =
-    parseOptionalNumber(
-      draft.cantidadDevueltaC,
-    );
-
   const totalRecibidaD =
     calcularTotalRecibido(
-      cantidadSurtidaA,
-      cantidadAdicionalB,
-      cantidadDevueltaC,
+      parseOptionalNumber(
+        draft.cantidadSurtidaA,
+      ),
+      parseOptionalNumber(
+        draft.cantidadAdicionalB,
+      ),
+      parseOptionalNumber(
+        draft.cantidadDevueltaC,
+      ),
     );
 
   const resultadoE = calcularEFoil(
@@ -153,10 +146,12 @@ function calculateFoilPvcPreview(draft) {
     );
 
   const porcentajeDiferencia =
-    calcularPorcentajeDiferencia(
-      totalRecibidaD,
-      diferencia,
-    );
+    material.descripcion === "FOIL PVC"
+      ? calcularPorcentajeDiferencia(
+          totalRecibidaD,
+          diferencia,
+        )
+      : null;
 
   const faltanValores = [
     totalRecibidaD,
@@ -172,11 +167,10 @@ function calculateFoilPvcPreview(draft) {
 
   const { estado: estadoMaterial } =
     evaluarEstadoMaterial({
-      tipoMaterial: "FOIL PVC",
+      tipoMaterial: material.descripcion,
       d: totalRecibidaD,
       diferencia,
-      porcentaje:
-        porcentajeDiferencia,
+      porcentaje: porcentajeDiferencia,
       faltanValores,
     });
 
@@ -188,7 +182,10 @@ function calculateFoilPvcPreview(draft) {
     totalUtilizadaH,
     diferencia,
     porcentajeDiferencia,
-    limitePermitido: 7,
+    limitePermitido:
+      material.descripcion === "FOIL PVC"
+        ? 7
+        : 2,
     estadoMaterial,
   };
 }
@@ -447,7 +444,7 @@ const [ materialMessages,setMaterialMessages,] = useState({});
     setError("");
     }
 
-    async function saveFoilPvc(material) {
+    async function saveFoil(material) {
         const draft = drafts[material.id];
 
         if (!draft) {
@@ -708,14 +705,14 @@ const [ materialMessages,setMaterialMessages,] = useState({});
                     </th>
 
                     {materials.map((material) => {
-                        const isFoilPvc =
-                        material.descripcion === "FOIL PVC";
+                        const isFoil =
+                        material.descripcion === "FOIL PVC" || material.descripcion === "FOIL ALUMINIO";
 
                         const draft = drafts[material.id];
 
                         return (
                         <td key={material.id}>
-                            {isFoilPvc ? (
+                            {isFoil ? (
                             <MatrixNumberInput
                                 value={
                                 draft?.cantidadSurtidaA ?? ""
@@ -745,14 +742,14 @@ const [ materialMessages,setMaterialMessages,] = useState({});
                 </th>
 
                 {materials.map((material) => {
-                    const isFoilPvc =
-                    material.descripcion === "FOIL PVC";
+                    const isFoil =
+                    material.descripcion === "FOIL PVC" || material.descripcion === "FOIL ALUMINIO";
 
                     const draft = drafts[material.id];
 
                     return (
                     <td key={material.id}>
-                        {isFoilPvc ? (
+                        {isFoil ? (
                         <MatrixNumberInput
                             value={
                             draft?.cantidadAdicionalB ?? ""
@@ -786,14 +783,14 @@ const [ materialMessages,setMaterialMessages,] = useState({});
                 </th>
 
                 {materials.map((material) => {
-                    const isFoilPvc =
-                    material.descripcion === "FOIL PVC";
+                    const isFoil =
+                    material.descripcion === "FOIL PVC" || material.descripcion === "FOIL ALUMINIO";
 
                     const draft = drafts[material.id];
 
                     return (
                     <td key={material.id}>
-                        {isFoilPvc ? (
+                        {isFoil ? (
                         <MatrixNumberInput
                             value={
                             draft?.cantidadDevueltaC ?? ""
@@ -827,16 +824,14 @@ const [ materialMessages,setMaterialMessages,] = useState({});
                 </th>
 
                 {materials.map((material) => {
-                    const isFoilPvc =
-                    material.descripcion === "FOIL PVC";
+                    const isFoil =
+                    material.descripcion === "FOIL PVC" || material.descripcion === "FOIL ALUMINIO";
 
-                    const preview = isFoilPvc
-                    ? calculateFoilPvcPreview(
-                        drafts[material.id],
-                        )
+                    const preview = isFoil
+                    ? calculateFoilPreview( material,drafts[material.id],)
                     : null;
 
-                    const value = isFoilPvc
+                    const value = isFoil
                     ? preview.totalRecibidaD
                     : material.totalRecibidaD;
 
@@ -864,14 +859,14 @@ const [ materialMessages,setMaterialMessages,] = useState({});
                     </th>
 
                     {materials.map((material) => {
-                        const isFoilPvc =
-                        material.descripcion === "FOIL PVC";
+                        const isFoil =
+                        material.descripcion === "FOIL PVC" || material.descripcion === "FOIL ALUMINIO";
 
                         const draft = drafts[material.id];
 
                         return (
                         <td key={material.id}>
-                            {isFoilPvc ? (
+                            {isFoil ? (
                             <MatrixNumberInput
                                 value={draft?.resultadoE ?? ""}
                                 unit="kg"
@@ -899,14 +894,14 @@ const [ materialMessages,setMaterialMessages,] = useState({});
                     </th>
 
                     {materials.map((material) => {
-                        const isFoilPvc =
-                        material.descripcion === "FOIL PVC";
+                        const isFoil =
+                        material.descripcion === "FOIL PVC" || material.descripcion === "FOIL ALUMINIO";
 
                         const draft = drafts[material.id];
 
                         return (
                         <td key={material.id}>
-                            {isFoilPvc ? (
+                            {isFoil ? (
                             <MatrixNumberInput
                                 value={draft?.resultadoF ?? ""}
                                 unit="kg"
@@ -954,16 +949,14 @@ const [ materialMessages,setMaterialMessages,] = useState({});
                     </th>
 
                     {materials.map((material) => {
-                        const isFoilPvc =
-                        material.descripcion === "FOIL PVC";
+                        const isFoil =
+                        material.descripcion === "FOIL PVC" || material.descripcion === "FOIL ALUMINIO";
 
-                        const preview = isFoilPvc
-                        ? calculateFoilPvcPreview(
-                            drafts[material.id],
-                            )
+                        const preview = isFoil
+                        ? calculateFoilPreview( material,drafts[material.id],)
                         : null;
 
-                        const value = isFoilPvc
+                        const value = isFoil
                         ? preview.totalUtilizadaH
                         : material.totalUtilizadaH;
 
@@ -991,16 +984,14 @@ const [ materialMessages,setMaterialMessages,] = useState({});
                     </th>
 
                     {materials.map((material) => {
-                        const isFoilPvc =
-                        material.descripcion === "FOIL PVC";
+                        const isFoil =
+                        material.descripcion === "FOIL PVC" || material.descripcion === "FOIL ALUMINIO";
 
-                        const preview = isFoilPvc
-                        ? calculateFoilPvcPreview(
-                            drafts[material.id],
-                            )
+                        const preview = isFoil
+                        ? calculateFoilPreview( material,drafts[material.id],)
                         : null;
 
-                        const value = isFoilPvc
+                        const value = isFoil
                         ? preview.diferencia
                         : material.diferencia;
 
@@ -1023,15 +1014,17 @@ const [ materialMessages,setMaterialMessages,] = useState({});
                     </th>
 
                     {materials.map((material) => {
-                        const isFoilPvc =
-                        material.descripcion === "FOIL PVC";
+                        const isFoil = [
+                        "FOIL PVC",
+                        "FOIL ALUMINIO",
+                        ].includes(material.descripcion);
 
                         const isFoilAluminio =
-                        material.descripcion ===
-                        "FOIL ALUMINIO";
+                        material.descripcion === "FOIL ALUMINIO";
 
-                        const preview = isFoilPvc
-                        ? calculateFoilPvcPreview(
+                        const preview = isFoil
+                        ? calculateFoilPreview(
+                            material,
                             drafts[material.id],
                             )
                         : null;
@@ -1047,11 +1040,11 @@ const [ materialMessages,setMaterialMessages,] = useState({});
                         );
                         }
 
-                        const porcentaje = isFoilPvc
+                        const porcentaje = isFoil
                         ? preview.porcentajeDiferencia
                         : material.porcentajeDiferencia;
 
-                        const totalRecibido = isFoilPvc
+                        const totalRecibido = isFoil
                         ? preview.totalRecibidaD
                         : material.totalRecibidaD;
 
@@ -1089,16 +1082,14 @@ const [ materialMessages,setMaterialMessages,] = useState({});
                     </th>
 
                     {materials.map((material) => {
-                        const isFoilPvc =
-                        material.descripcion === "FOIL PVC";
+                        const isFoil =
+                        material.descripcion === "FOIL PVC" || material.descripcion === "FOIL ALUMINIO";
 
-                        const preview = isFoilPvc
-                        ? calculateFoilPvcPreview(
-                            drafts[material.id],
-                            )
+                        const preview = isFoil
+                        ? calculateFoilPreview( material,drafts[material.id],)
                         : null;
 
-                        const status = isFoilPvc
+                        const status = isFoil
                         ? preview.estadoMaterial
                         : material.estadoMaterial;
 
@@ -1124,8 +1115,8 @@ const [ materialMessages,setMaterialMessages,] = useState({});
                     </th>
 
                     {materials.map((material) => {
-                        const isFoilPvc =
-                        material.descripcion === "FOIL PVC";
+                        const isFoil =
+                        material.descripcion === "FOIL PVC" || material.descripcion === "FOIL ALUMINIO";
 
                         const isSaving = Boolean(
                         savingMaterialIds[material.id],
@@ -1136,14 +1127,14 @@ const [ materialMessages,setMaterialMessages,] = useState({});
 
                         return (
                         <td key={material.id}>
-                            {isFoilPvc ? (
+                            {isFoil ? (
                             <div className="matrix-save-area">
                                 <button
                                 type="button"
                                 className="button primary matrix-save-button"
                                 disabled={isSaving}
                                 onClick={() =>
-                                    saveFoilPvc(material)
+                                    saveFoil(material)
                                 }
                                 >
                                 {isSaving

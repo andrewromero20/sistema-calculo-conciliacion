@@ -8,6 +8,7 @@ import DatosGeneralesSE from "./DatosGeneralesSE";
 import Icon from "../ui/Icon";
 
 const DRAFT_STORAGE_KEY = "se_form_draft";
+const DRAFT_SESSION_KEY = "se_draft_session_active";
 
 const INITIAL_STATE = {
   ordenGranel: "",
@@ -54,24 +55,7 @@ export default function NuevoRegistroWizard() {
 
   // Modo plantilla y post-guardado
   const [templateMode, setTemplateMode] = useState(false);
-  const [hasDraftNotice, setHasDraftNotice] = useState(() => {
-    if (typeof window === "undefined") return false;
-    try {
-      const raw = sessionStorage.getItem(DRAFT_STORAGE_KEY);
-      if (raw) {
-        const parsed = JSON.parse(raw);
-        return Boolean(
-          parsed.ordenGranel ||
-            parsed.lote ||
-            parsed.producto ||
-            (parsed.pesos && parsed.pesos.some((p) => Number(p.pesoBruto) > 0))
-        );
-      }
-    } catch {
-      return false;
-    }
-    return false;
-  });
+  const [hasDraftNotice, setHasDraftNotice] = useState(false);
   const [successBanner, setSuccessBanner] = useState(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [apiError, setApiError] = useState("");
@@ -83,8 +67,52 @@ export default function NuevoRegistroWizard() {
     }
   }, []);
 
-  // Guardar en sessionStorage en tiempo real
+  // Verificar borrador al montar el componente
   useEffect(() => {
+    try {
+      const raw =
+        localStorage.getItem(DRAFT_STORAGE_KEY) ||
+        sessionStorage.getItem(DRAFT_STORAGE_KEY);
+      if (!raw) return;
+
+      const parsed = JSON.parse(raw);
+      const hasContent = Boolean(
+        parsed.ordenGranel ||
+          parsed.lote ||
+          parsed.producto ||
+          (parsed.pesos && parsed.pesos.some((p) => Number(p.pesoBruto) > 0))
+      );
+
+      if (!hasContent) return;
+
+      const isSessionActive =
+        sessionStorage.getItem(DRAFT_SESSION_KEY) === "true";
+
+      if (isSessionActive) {
+        // El usuario está navegando entre menús dentro de la aplicación:
+        // Restaurar automáticamente sin mostrar aviso
+        setValues((prev) => ({ ...prev, ...parsed }));
+        if (parsed.currentStep && parsed.currentStep >= 1 && parsed.currentStep <= 3) {
+          setCurrentStep(parsed.currentStep);
+        } else if (parsed.ordenGranel) {
+          setCurrentStep(2);
+        }
+        setHasDraftNotice(false);
+      } else {
+        // El usuario salió de la aplicación (cerró ventana/pestaña o sesión):
+        // Mostrar aviso permitiendo restaurar o empezar de cero
+        setHasDraftNotice(true);
+      }
+    } catch (e) {
+      console.error("Error al cargar borrador previo:", e);
+    }
+  }, []);
+
+  // Guardar en localStorage y sessionStorage en tiempo real
+  useEffect(() => {
+    // Si hay un aviso pendiente de una sesión previa, no sobrescribir el borrador antes de que decida el usuario
+    if (hasDraftNotice) return;
+
     const hasData =
       Boolean(values.ordenGranel) ||
       Boolean(values.lote) ||
@@ -92,10 +120,13 @@ export default function NuevoRegistroWizard() {
       values.pesos.some((p) => Number(p.pesoBruto) > 0);
 
     if (hasData) {
-      sessionStorage.setItem(DRAFT_STORAGE_KEY, JSON.stringify({ ...values, currentStep }));
+      const serialized = JSON.stringify({ ...values, currentStep });
+      localStorage.setItem(DRAFT_STORAGE_KEY, serialized);
+      sessionStorage.setItem(DRAFT_STORAGE_KEY, serialized);
+      sessionStorage.setItem(DRAFT_SESSION_KEY, "true");
       notifyDraftUpdate();
     }
-  }, [values, currentStep, notifyDraftUpdate]);
+  }, [values, currentStep, hasDraftNotice, notifyDraftUpdate]);
 
   // Protección beforeunload
   useEffect(() => {
@@ -117,7 +148,9 @@ export default function NuevoRegistroWizard() {
 
   function restaurarBorrador() {
     try {
-      const raw = sessionStorage.getItem(DRAFT_STORAGE_KEY);
+      const raw =
+        localStorage.getItem(DRAFT_STORAGE_KEY) ||
+        sessionStorage.getItem(DRAFT_STORAGE_KEY);
       if (raw) {
         const parsed = JSON.parse(raw);
         setValues((prev) => ({ ...prev, ...parsed }));
@@ -126,7 +159,9 @@ export default function NuevoRegistroWizard() {
         } else if (parsed.ordenGranel) {
           setCurrentStep(2);
         }
+        sessionStorage.setItem(DRAFT_SESSION_KEY, "true");
         setHasDraftNotice(false);
+        notifyDraftUpdate();
       }
     } catch (e) {
       console.error("Error al restaurar borrador:", e);
@@ -134,7 +169,13 @@ export default function NuevoRegistroWizard() {
   }
 
   function descartarBorrador() {
-    sessionStorage.removeItem(DRAFT_STORAGE_KEY);
+    try {
+      localStorage.removeItem(DRAFT_STORAGE_KEY);
+      sessionStorage.removeItem(DRAFT_STORAGE_KEY);
+      sessionStorage.removeItem(DRAFT_SESSION_KEY);
+    } catch (e) {
+      console.error(e);
+    }
     setHasDraftNotice(false);
     setValues(INITIAL_STATE);
     setCurrentStep(1);
@@ -272,7 +313,13 @@ export default function NuevoRegistroWizard() {
       }
 
       // Limpiar borrador temporal
-      sessionStorage.removeItem(DRAFT_STORAGE_KEY);
+      try {
+        localStorage.removeItem(DRAFT_STORAGE_KEY);
+        sessionStorage.removeItem(DRAFT_STORAGE_KEY);
+        sessionStorage.removeItem(DRAFT_SESSION_KEY);
+      } catch (e) {
+        console.error(e);
+      }
       notifyDraftUpdate();
 
       // Mostrar modal de éxito y opciones post-guardado
@@ -291,7 +338,13 @@ export default function NuevoRegistroWizard() {
   function handleNuevoEnBlanco() {
     setSuccessBanner(null);
     setTemplateMode(false);
-    sessionStorage.removeItem(DRAFT_STORAGE_KEY);
+    try {
+      localStorage.removeItem(DRAFT_STORAGE_KEY);
+      sessionStorage.removeItem(DRAFT_STORAGE_KEY);
+      sessionStorage.removeItem(DRAFT_SESSION_KEY);
+    } catch (e) {
+      console.error(e);
+    }
     notifyDraftUpdate();
     setValues(INITIAL_STATE);
     setCurrentStep(1);
@@ -350,36 +403,40 @@ export default function NuevoRegistroWizard() {
 
   return (
     <div className="space-y-6">
-      {/* Aviso de borrador disponible */}
+      {/* Aviso de borrador disponible al volver a la aplicación */}
       {hasDraftNotice && (
-        <div className="p-4 rounded-xl bg-blue-50 border border-blue-200 text-blue-900 flex flex-wrap items-center justify-between gap-3 shadow-xs">
-          <div className="flex items-center gap-2.5">
-            <span className="w-8 h-8 rounded-full bg-blue-200 text-blue-800 font-bold flex items-center justify-center text-sm">
-              ℹ
-            </span>
+        <div className="p-4 sm:p-5 rounded-2xl bg-amber-50/90 border border-amber-300/80 text-amber-950 flex flex-wrap items-center justify-between gap-4 shadow-sm animate-in fade-in slide-in-from-top-2 duration-200">
+          <div className="flex items-center gap-3.5">
+            <div className="w-10 h-10 rounded-xl bg-amber-100 border border-amber-200 text-amber-700 flex items-center justify-center shrink-0 shadow-xs">
+              <Icon name="history" size={20} />
+            </div>
             <div>
-              <p className="font-bold text-xs uppercase tracking-wider">
-                Captura previa en curso detectada
-              </p>
-              <p className="text-xs text-blue-700">
-                Hay datos guardados temporalmente en tu navegador.
+              <div className="flex items-center gap-2">
+                <span className="inline-block w-2 h-2 rounded-full bg-amber-500 animate-pulse" />
+                <h4 className="font-bold text-xs sm:text-sm text-amber-950 tracking-tight">
+                  Captura previa en curso detectada
+                </h4>
+              </div>
+              <p className="text-xs text-amber-800/90 mt-0.5">
+                Se detectaron datos sin finalizar de tu sesión anterior. ¿Deseas recuperarlos o empezar uno nuevo?
               </p>
             </div>
           </div>
-          <div className="flex items-center gap-2">
-            <button
-              type="button"
-              onClick={restaurarBorrador}
-              className="py-1.5 px-3 rounded-md bg-[#0d6efd] text-white text-xs font-semibold hover:bg-[#0b5ed7] transition shadow-xs"
-            >
-              Restaurar captura
-            </button>
+          <div className="flex items-center gap-2.5 w-full sm:w-auto justify-end">
             <button
               type="button"
               onClick={descartarBorrador}
-              className="py-1.5 px-3 rounded-md border border-slate-300 text-slate-700 text-xs font-medium hover:bg-slate-100 transition"
+              className="py-2 px-3.5 rounded-lg border border-amber-300/80 bg-white hover:bg-amber-100/60 text-slate-700 text-xs font-semibold transition shadow-2xs"
             >
               Empezar de cero
+            </button>
+            <button
+              type="button"
+              onClick={restaurarBorrador}
+              className="py-2 px-4 rounded-lg bg-[#0d6efd] hover:bg-[#0b5ed7] text-white text-xs font-bold transition shadow-xs flex items-center gap-1.5"
+            >
+              <Icon name="check" size={14} />
+              <span>Restaurar captura</span>
             </button>
           </div>
         </div>

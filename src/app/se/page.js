@@ -36,19 +36,6 @@ export default function SeDashboardPage() {
     );
   });
 
-  const totalKg = registros.reduce(
-    (acc, r) => acc + (Number(r.pesoNetoTotalTabletas) || 0),
-    0,
-  );
-
-  const rendPromedio =
-    registros.length > 0
-      ? (
-          registros.reduce((acc, r) => acc + (Number(r.rendimientoTab) || 0), 0) /
-          registros.length
-        ).toFixed(1)
-      : "0.0";
-
   return (
     <div className="app-shell">
       <Sidebar activeView="se-inicio" />
@@ -57,58 +44,6 @@ export default function SeDashboardPage() {
           title="Producto Semielaborado (SE)"
           description="Control de pesadas, tableteado, recubrimiento y órdenes a granel."
         />
-
-        {/* Tarjetas resumen (Figma 89:4) */}
-        <div className="grid grid-cols-1 sm:grid-cols-4 gap-4">
-          <div className="card p-5">
-            <span className="text-xs font-bold uppercase tracking-wider text-slate-500">
-              Órdenes a Granel
-            </span>
-            <p className="text-2xl font-bold text-slate-900 mt-1">
-              {registros.length}
-            </p>
-            <span className="text-[11px] text-slate-400">
-              Registros en sistema
-            </span>
-          </div>
-
-          <div className="card p-5">
-            <span className="text-xs font-bold uppercase tracking-wider text-slate-500">
-              Masa Total Tableteada
-            </span>
-            <p className="text-2xl font-bold text-[#0d6efd] mt-1 font-mono">
-              {totalKg.toFixed(2)} kg
-            </p>
-            <span className="text-[11px] text-slate-400">
-              Suma de pesos netos
-            </span>
-          </div>
-
-          <div className="card p-5">
-            <span className="text-xs font-bold uppercase tracking-wider text-slate-500">
-              Rendimiento Promedio
-            </span>
-            <p className="text-2xl font-bold text-emerald-600 mt-1 font-mono">
-              {rendPromedio}%
-            </p>
-            <span className="text-[11px] text-slate-400">
-              Control analítico
-            </span>
-          </div>
-
-          <div className="card p-5 flex flex-col justify-between">
-            <span className="text-xs font-bold uppercase tracking-wider text-slate-500">
-              Captura Rápida
-            </span>
-            <Link
-              href="/se/nuevo"
-              className="mt-2 py-2 px-4 rounded-lg bg-[#0d6efd] hover:bg-[#0b5ed7] text-white text-xs font-bold transition flex items-center justify-center gap-2 shadow-xs"
-            >
-              <Icon name="plus" size={15} />
-              <span>Nuevo Registro</span>
-            </Link>
-          </div>
-        </div>
 
         {/* Buscador y Tabla de Registros */}
         <div className="card p-6 space-y-4">
@@ -123,6 +58,14 @@ export default function SeDashboardPage() {
             </div>
 
             <div className="flex items-center gap-3">
+              <Link
+                href="/se/nuevo"
+                className="py-1.5 px-3.5 rounded-lg bg-[#0d6efd] hover:bg-[#0b5ed7] text-white text-xs font-bold transition flex items-center gap-1.5 shadow-xs whitespace-nowrap"
+              >
+                <Icon name="plus" size={14} />
+                <span>Nuevo Registro</span>
+              </Link>
+
               <div className="w-full sm:w-64">
                 <input
                   type="text"

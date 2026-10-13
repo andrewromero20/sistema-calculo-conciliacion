@@ -9,8 +9,8 @@ export default function Icon({ name, size = 18 }) {
 		search: <><circle cx="10.5" cy="10.5" r="6.5" /><path d="m16 16 5 5" /></>,
 		eye: <><path d="M2.5 12s3.5-6 9.5-6 9.5 6 9.5 6-3.5 6-9.5 6-9.5-6-9.5-6Z" /><circle cx="12" cy="12" r="2.5" /></>,
 		edit: <><path d="m4 16-.8 4.8L8 20l11.3-11.3a2.2 2.2 0 0 0-3.1-3.1L4 16Z" /><path d="m14.5 7.5 3 3" /></>,
-		trash: <><path d="M4 7h16M10 11v6M14 11v6" /><path d="M9 7V4h6v3M6 7l1 14h10l1-14" /></>,
 		arrow: <path d="M5 12h14M13 6l6 6-6 6" />,
+		check: <path d="M20 6 9 17l-5-5" />,
 	};
 
 	return <svg aria-hidden="true" className="icon" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">{shapes[name]}</svg>;

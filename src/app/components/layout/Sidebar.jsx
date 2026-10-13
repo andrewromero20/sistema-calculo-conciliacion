@@ -23,7 +23,9 @@ export default function Sidebar({ activeView }) {
   useEffect(() => {
     const checkDraft = () => {
       try {
-        const raw = sessionStorage.getItem("se_form_draft");
+        const raw =
+          localStorage.getItem("se_form_draft") ||
+          sessionStorage.getItem("se_form_draft");
         if (raw) {
           const parsed = JSON.parse(raw);
           const hasContent = Boolean(
@@ -56,6 +58,9 @@ export default function Sidebar({ activeView }) {
 
   async function handleLogout() {
     try {
+      if (typeof window !== "undefined") {
+        sessionStorage.removeItem("se_draft_session_active");
+      }
       await fetch("/api/auth/logout", { method: "POST" });
       router.push("/login");
       router.refresh();
@@ -122,14 +127,21 @@ export default function Sidebar({ activeView }) {
             className={`nav-item ${activeView === item.id ? "active" : ""}`}
           >
             <Icon name={item.icon} />
-            <span className="flex-1 truncate">{item.label}</span>
+            <span className="truncate">{item.label}</span>
             {item.hasBadge && (
               <span
-                title="Tienes una captura de registro sin finalizar"
-                className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[9px] font-bold bg-amber-400 text-amber-950 shadow-xs whitespace-nowrap animate-pulse"
+                title="Tienes una captura de registro en curso"
+                className={`ml-auto shrink-0 inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[10px] font-semibold tracking-tight transition shadow-xs ${
+                  activeView === item.id
+                    ? "bg-white/20 text-white border border-white/30"
+                    : "bg-amber-400/20 text-amber-300 border border-amber-400/30"
+                }`}
               >
-                <span className="text-[10px]">⚠️</span>
-                <span>Registro en curso</span>
+                <span className="relative flex h-1.5 w-1.5">
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75"></span>
+                  <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-amber-400"></span>
+                </span>
+                <span>En curso</span>
               </span>
             )}
           </Link>

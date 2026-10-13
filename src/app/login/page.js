@@ -47,10 +47,19 @@ export default function LoginPage() {
         body: JSON.stringify({ email, password }),
       });
 
-      const data = await res.json();
+      let data = null;
+      try {
+        data = await res.json();
+      } catch {
+        throw new Error(
+          res.status === 404
+            ? "Ruta /api/auth/login no encontrada (404). Verifica que tu repositorio tenga la rama con autenticación activa (ej. feature/semi)."
+            : `El servidor devolvió un error HTTP ${res.status} no-JSON. Revisa la consola del servidor Next.js o tu archivo .env.`
+        );
+      }
 
       if (!res.ok) {
-        throw new Error(data.error || "Error al iniciar sesión.");
+        throw new Error(data?.error || "Error al iniciar sesión.");
       }
 
       // Redirigir según rol

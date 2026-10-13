@@ -18,8 +18,9 @@ export default function SeHistorialPage() {
   // Búsqueda rápida
   const [searchTerm, setSearchTerm] = useState("");
 
-  // Filtros avanzados (Figma Comments 11, 12, 13)
+  // Filtros avanzados (Figma Comments 11, 12, 13 & nodos 96:140)
   const [showAdvancedFilters, setShowAdvancedFilters] = useState(false);
+  const [filtroCodigoMaterial, setFiltroCodigoMaterial] = useState("");
   const [filtroProducto, setFiltroProducto] = useState("");
   const [filtroSupervisor, setFiltroSupervisor] = useState("");
   const [filtroRendMin, setFiltroRendMin] = useState("");
@@ -47,9 +48,13 @@ export default function SeHistorialPage() {
       .finally(() => setLoading(false));
   }, []);
 
-  // Lista única de productos y supervisores para autocompletar filtros
+  // Lista única de productos, códigos y supervisores para autocompletar filtros
   const listaProductos = useMemo(() => {
     return Array.from(new Set(registros.map((r) => r.producto).filter(Boolean)));
+  }, [registros]);
+
+  const listaCodigos = useMemo(() => {
+    return Array.from(new Set(registros.map((r) => r.codigoMaterial).filter(Boolean)));
   }, [registros]);
 
   const listaSupervisores = useMemo(() => {
@@ -70,17 +75,25 @@ export default function SeHistorialPage() {
         const matchesOrden = item.ordenGranel?.toLowerCase().includes(term);
         const matchesLote = item.lote?.toLowerCase().includes(term);
         const matchesProd = item.producto?.toLowerCase().includes(term);
-        if (!matchesOrden && !matchesLote && !matchesProd) return false;
+        const matchesCod = item.codigoMaterial?.toLowerCase().includes(term);
+        if (!matchesOrden && !matchesLote && !matchesProd && !matchesCod) return false;
       }
 
-      // 2. Filtro por producto
+      // 2. Filtro por código de material (Figma 96:140)
+      if (filtroCodigoMaterial) {
+        if (!item.codigoMaterial?.toLowerCase().includes(filtroCodigoMaterial.toLowerCase())) {
+          return false;
+        }
+      }
+
+      // 3. Filtro por producto
       if (filtroProducto) {
         if (!item.producto?.toLowerCase().includes(filtroProducto.toLowerCase())) {
           return false;
         }
       }
 
-      // 3. Filtro por supervisor
+      // 4. Filtro por supervisor
       if (filtroSupervisor) {
         const supTerm = filtroSupervisor.toLowerCase();
         const supPrep = item.supervisorPreparacion?.toLowerCase() || "";
@@ -90,7 +103,7 @@ export default function SeHistorialPage() {
         }
       }
 
-      // 4. Filtro por rango de rendimiento (%)
+      // 5. Filtro por rango de rendimiento (%)
       const rend = Number(item.rendimientoTab) || 0;
       if (filtroRendMin !== "" && rend < Number(filtroRendMin)) {
         return false;
@@ -99,7 +112,7 @@ export default function SeHistorialPage() {
         return false;
       }
 
-      // 5. Filtro por rango de fechas
+      // 6. Filtro por rango de fechas
       if (filtroFechaDesde) {
         const itemDate = new Date(item.fechaCreacion).toISOString().slice(0, 10);
         if (itemDate < filtroFechaDesde) return false;
@@ -114,6 +127,7 @@ export default function SeHistorialPage() {
   }, [
     registros,
     searchTerm,
+    filtroCodigoMaterial,
     filtroProducto,
     filtroSupervisor,
     filtroRendMin,
@@ -124,6 +138,7 @@ export default function SeHistorialPage() {
 
   function limpiarFiltros() {
     setSearchTerm("");
+    setFiltroCodigoMaterial("");
     setFiltroProducto("");
     setFiltroSupervisor("");
     setFiltroRendMin("");
@@ -134,6 +149,7 @@ export default function SeHistorialPage() {
   }
 
   const activeFilterCount =
+    (filtroCodigoMaterial ? 1 : 0) +
     (filtroProducto ? 1 : 0) +
     (filtroSupervisor ? 1 : 0) +
     (filtroRendMin || filtroRendMax ? 1 : 0) +
@@ -210,9 +226,28 @@ export default function SeHistorialPage() {
             </div>
           </div>
 
-          {/* Panel Desplegable de Filtros Avanzados (Figma Comments 12-13) */}
+          {/* Panel Desplegable de Filtros Avanzados (Figma Comments 12-13 & nodo 96:140) */}
           {showAdvancedFilters && (
-            <div className="pt-4 border-t border-slate-100 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4 animate-in fade-in duration-200">
+            <div className="pt-4 border-t border-slate-100 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4 animate-in fade-in duration-200">
+              {/* Filtro por Código de Material (Figma 96:140) */}
+              <div>
+                <label className="block text-[11px] font-bold text-slate-700 uppercase tracking-wider mb-1">
+                  Código Material
+                </label>
+                <select
+                  value={filtroCodigoMaterial}
+                  onChange={(e) => setFiltroCodigoMaterial(e.target.value)}
+                  className="w-full px-2.5 py-1.5 text-xs border border-slate-300 rounded-lg bg-white focus:outline-none focus:ring-1 focus:ring-blue-500 font-mono"
+                >
+                  <option value="">Todos los códigos</option>
+                  {listaCodigos.map((c) => (
+                    <option key={c} value={c}>
+                      {c}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
               {/* Filtro por Producto */}
               <div>
                 <label className="block text-[11px] font-bold text-slate-700 uppercase tracking-wider mb-1">

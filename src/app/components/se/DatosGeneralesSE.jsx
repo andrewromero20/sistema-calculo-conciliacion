@@ -338,20 +338,17 @@ export default function DatosGeneralesSE({
                 </label>
                 <input
                   id="cantPzasCargarSap"
-                  type="number"
-                  step="1"
-                  value={values.cantPzasCargarSap ?? ""}
-                  onChange={(e) => onChangeField("cantPzasCargarSap", e.target.value)}
-                  disabled={readOnly}
-                  placeholder="477884"
-                  className={`w-full px-3 py-2 text-xs border rounded-lg transition font-mono ${
-                    readOnly
-                      ? "bg-slate-100 text-slate-600 border-slate-200 cursor-not-allowed"
-                      : errors.cantPzasCargarSap
-                      ? "border-red-400 bg-red-50/30 text-slate-900"
-                      : "border-slate-300 bg-white hover:border-slate-400"
-                  }`}
+                  type="text"
+                  value={values.cantPzasCargarSap !== "" && values.cantPzasCargarSap !== undefined ? values.cantPzasCargarSap : ""}
+                  disabled={true}
+                  readOnly={true}
+                  placeholder="Calculado automáticamente"
+                  title="Calculado automáticamente: (Peso Neto Total * 1000) / Peso Promedio"
+                  className="w-full px-3 py-2 text-xs border border-slate-200 bg-slate-100 text-slate-700 font-mono font-bold rounded-lg cursor-not-allowed select-none"
                 />
+                <span className="text-[10px] text-slate-400 mt-0.5 block">
+                  Autocalculado: Peso Neto Total / Peso Promedio
+                </span>
                 {errors.cantPzasCargarSap && (
                   <p className="mt-1 text-[11px] text-red-600 font-medium">
                     {errors.cantPzasCargarSap}
@@ -368,20 +365,17 @@ export default function DatosGeneralesSE({
                 </label>
                 <input
                   id="cantPzasAcondicionar"
-                  type="number"
-                  step="1"
-                  value={values.cantPzasAcondicionar ?? ""}
-                  onChange={(e) => onChangeField("cantPzasAcondicionar", e.target.value)}
-                  disabled={readOnly}
-                  placeholder="475000"
-                  className={`w-full px-3 py-2 text-xs border rounded-lg transition font-mono ${
-                    readOnly
-                      ? "bg-slate-100 text-slate-600 border-slate-200 cursor-not-allowed"
-                      : errors.cantPzasAcondicionar
-                      ? "border-red-400 bg-red-50/30 text-slate-900"
-                      : "border-slate-300 bg-white hover:border-slate-400"
-                  }`}
+                  type="text"
+                  value={values.cantPzasAcondicionar !== "" && values.cantPzasAcondicionar !== undefined ? values.cantPzasAcondicionar : ""}
+                  disabled={true}
+                  readOnly={true}
+                  placeholder="Calculado automáticamente"
+                  title="Calculado automáticamente: Cant. Pzas SAP / Cant. Tab por Pza."
+                  className="w-full px-3 py-2 text-xs border border-slate-200 bg-slate-100 text-slate-700 font-mono font-bold rounded-lg cursor-not-allowed select-none"
                 />
+                <span className="text-[10px] text-slate-400 mt-0.5 block">
+                  Autocalculado: Cant. SAP / Cant. Tab. por Pza.
+                </span>
                 {errors.cantPzasAcondicionar && (
                   <p className="mt-1 text-[11px] text-red-600 font-medium">
                     {errors.cantPzasAcondicionar}
@@ -401,24 +395,21 @@ export default function DatosGeneralesSE({
                 <div className="relative">
                   <input
                     id="rendimientoTab"
-                    type="number"
-                    step="0.1"
-                    value={values.rendimientoTab ?? ""}
-                    onChange={(e) => onChangeField("rendimientoTab", e.target.value)}
-                    disabled={readOnly}
-                    placeholder="99.4"
-                    className={`w-full px-3 py-2 text-xs border rounded-lg transition font-mono font-bold ${
-                      readOnly
-                        ? "bg-slate-100 text-slate-600 border-slate-200 cursor-not-allowed"
-                        : errors.rendimientoTab
-                        ? "border-red-400 bg-red-50/30 text-slate-900"
-                        : "border-slate-300 bg-white hover:border-slate-400"
-                    }`}
+                    type="text"
+                    value={values.rendimientoTab !== "" && values.rendimientoTab !== undefined ? values.rendimientoTab : ""}
+                    disabled={true}
+                    readOnly={true}
+                    placeholder="Calculado automáticamente"
+                    title="Calculado automáticamente: (Peso Neto / Peso Promedio) / Tamaño de Lote Estándar"
+                    className="w-full px-3 py-2 text-xs border border-slate-200 bg-slate-100 text-slate-700 font-mono font-bold rounded-lg cursor-not-allowed select-none"
                   />
                   <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-slate-400 font-bold">
                     %
                   </span>
                 </div>
+                <span className="text-[10px] text-slate-400 mt-0.5 block">
+                  Autocalculado: (Peso Neto / Peso Prom.) / Tamaño Lote
+                </span>
                 {errors.rendimientoTab && (
                   <p className="mt-1 text-[11px] text-red-600 font-medium">
                     {errors.rendimientoTab}

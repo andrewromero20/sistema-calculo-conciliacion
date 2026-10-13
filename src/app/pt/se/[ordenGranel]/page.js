@@ -47,7 +47,7 @@ export default function PtSeDetailLookupPage() {
         <div className="flex items-center justify-between">
           <Link
             href="/pt/se"
-            className="text-xs font-semibold text-slate-600 hover:text-slate-900 flex items-center gap-1.5 transition"
+            className="py-1.5 px-3.5 rounded-lg bg-[#1a2b45] hover:bg-[#142236] text-white text-xs font-semibold shadow-xs transition inline-flex items-center gap-1.5"
           >
             <span>← Volver al catálogo de Semielaborados</span>
           </Link>

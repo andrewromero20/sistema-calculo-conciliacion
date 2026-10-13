@@ -22,20 +22,19 @@ export default function CapturaCantidades({
   errors = {},
 }) {
   const [currentPage, setCurrentPage] = useState(1);
-  const [defaultTaraInput, setDefaultTaraInput] = useState("2.10");
 
-  // Asegurar que existan exactamente 48 filas para la captura o mapeo uniforme
+  // Asegurar que existan exactamente 48 filas para la captura o mapeo uniforme (tara por default en 0)
   const fullPesos = useMemo(() => {
     const list = [...pesos];
     while (list.length < TOTAL_ROWS) {
       list.push({
         pesoBruto: "",
-        pesoTara: defaultTaraInput || "2.10",
+        pesoTara: "0",
         pesoNeto: 0,
       });
     }
     return list.slice(0, TOTAL_ROWS);
-  }, [pesos, defaultTaraInput]);
+  }, [pesos]);
 
   // Cálculos de totales
   const totalNeto = useMemo(() => {
@@ -108,43 +107,58 @@ export default function CapturaCantidades({
     }
   }
 
-  // Manejo de Enter para avanzar a la siguiente fila fluidamente
+  // Manejo de Enter: de pesoBruto -> pesoTara de la misma fila, de pesoTara -> pesoBruto de la siguiente fila
   function handleKeyDown(e, globalIndex, field) {
     if (e.key === "Enter") {
       e.preventDefault();
-      const nextId =
-        field === "pesoBruto"
-          ? `input-bruto-${globalIndex + 1}`
-          : `input-tara-${globalIndex + 1}`;
-      const el = document.getElementById(nextId);
-      if (el) {
-        el.focus();
-      } else if (globalIndex + 1 < TOTAL_ROWS) {
-        // Si está en la siguiente página, cambiar de página y enfocar
-        const targetPage = Math.floor((globalIndex + 1) / PAGE_SIZE) + 1;
-        setCurrentPage(targetPage);
-        setTimeout(() => {
-          document.getElementById(nextId)?.focus();
-        }, 50);
+      if (field === "pesoBruto") {
+        // Al dar Enter en peso bruto, mandar a la casilla de peso tara de la misma fila
+        const taraEl = document.getElementById(`input-tara-${globalIndex}`);
+        if (taraEl && !taraEl.disabled) {
+          taraEl.focus();
+          taraEl.select?.();
+        }
+      } else if (field === "pesoTara") {
+        // Al dar Enter en peso tara, mandar a peso bruto de la siguiente fila
+        const nextIndex = globalIndex + 1;
+        if (nextIndex < TOTAL_ROWS) {
+          const targetPage = Math.floor(nextIndex / PAGE_SIZE) + 1;
+          if (targetPage !== currentPage) {
+            setCurrentPage(targetPage);
+            setTimeout(() => {
+              const nextEl = document.getElementById(`input-bruto-${nextIndex}`);
+              if (nextEl && !nextEl.disabled) {
+                nextEl.focus();
+                nextEl.select?.();
+              }
+            }, 60);
+          } else {
+            const nextEl = document.getElementById(`input-bruto-${nextIndex}`);
+            if (nextEl && !nextEl.disabled) {
+              nextEl.focus();
+              nextEl.select?.();
+            }
+          }
+        }
       }
     }
   }
 
-  // Aplicar tara común a todas las filas
-  function handleAplicarTaraComun() {
+  // Borrar todas las cantidades registradas (pesadas 1 a 48)
+  function handleBorrarTodasLasCantidades() {
     if (readOnly || !onChangePesos) return;
-    const taraNum = Number(defaultTaraInput) || 0;
-    const formattedTara = defaultTaraInput.includes(".") ? defaultTaraInput : `${defaultTaraInput}.0`;
-    const updated = fullPesos.map((item) => {
-      const bruto = Number(item.pesoBruto) || 0;
-      const neto = bruto >= taraNum ? Number((bruto - taraNum).toFixed(2)) : 0;
-      return {
-        ...item,
-        pesoTara: formattedTara,
-        pesoNeto: neto,
-      };
-    });
-    onChangePesos(updated);
+    const confirmClear = window.confirm(
+      "¿Deseas borrar todas las cantidades registradas? Esto reiniciará las 48 pesadas a cero."
+    );
+    if (!confirmClear) return;
+
+    const reset = Array.from({ length: TOTAL_ROWS }, () => ({
+      pesoBruto: "",
+      pesoTara: "0",
+      pesoNeto: 0,
+    }));
+    onChangePesos(reset);
+    setCurrentPage(1);
   }
 
   // Paginación de 12 por página
@@ -167,24 +181,15 @@ export default function CapturaCantidades({
         </div>
 
         {!readOnly && (
-          <div className="flex items-center gap-2">
-            <span className="text-xs text-slate-600 font-medium">Tara común:</span>
-            <input
-              type="text"
-              value={defaultTaraInput}
-              onChange={(e) => setDefaultTaraInput(e.target.value)}
-              className="w-16 px-2 py-1 text-xs border border-slate-300 rounded font-mono text-center focus:ring-1 focus:ring-blue-500"
-              placeholder="2.10"
-            />
-            <button
-              type="button"
-              onClick={handleAplicarTaraComun}
-              className="px-2.5 py-1 rounded bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold border border-slate-300 transition"
-              title="Aplica este valor de tara a las 48 celdas"
-            >
-              Aplicar tara
-            </button>
-          </div>
+          <button
+            type="button"
+            onClick={handleBorrarTodasLasCantidades}
+            className="py-1.5 px-3 rounded-lg border border-red-200 bg-red-50 hover:bg-red-100 text-red-700 text-xs font-semibold transition flex items-center gap-1.5 shadow-2xs"
+            title="Borrar todas las cantidades registradas"
+          >
+            <Icon name="trash" size={13} />
+            <span>Borrar todas las cantidades</span>
+          </button>
         )}
       </div>
 
@@ -215,6 +220,16 @@ export default function CapturaCantidades({
                 const invalidRow =
                   hasValue && Number(item.pesoTara) > Number(item.pesoBruto);
 
+                // Enforzar orden secuencial (Paso 1 luego 2 luego 3...)
+                const isRowEnabled =
+                  globalIndex === 0 ||
+                  (fullPesos[globalIndex - 1] &&
+                    Number(fullPesos[globalIndex - 1].pesoBruto) > 0);
+                const isTaraEnabled =
+                  isRowEnabled &&
+                  item.pesoBruto !== "" &&
+                  Number(item.pesoBruto) > 0;
+
                 return (
                   <tr
                     key={globalIndex}
@@ -236,6 +251,7 @@ export default function CapturaCantidades({
                           id={`input-bruto-${globalIndex}`}
                           type="text"
                           inputMode="decimal"
+                          disabled={!isRowEnabled}
                           value={item.pesoBruto}
                           onChange={(e) =>
                             handleCellChange(globalIndex, "pesoBruto", e.target.value)
@@ -245,8 +261,15 @@ export default function CapturaCantidades({
                           }
                           onKeyDown={(e) => handleKeyDown(e, globalIndex, "pesoBruto")}
                           placeholder="0.0"
-                          className={`w-full max-w-[180px] px-3 py-1.5 border rounded font-mono text-xs focus:outline-none focus:ring-2 focus:ring-blue-500 ${
-                            invalidRow
+                          title={
+                            !isRowEnabled
+                              ? "Completa primero la pesada anterior para habilitar esta casilla"
+                              : ""
+                          }
+                          className={`w-full max-w-[180px] px-3 py-1.5 border rounded font-mono text-xs focus:outline-none focus:ring-2 focus:ring-blue-500 transition ${
+                            !isRowEnabled
+                              ? "border-slate-200 bg-slate-100 text-slate-400 cursor-not-allowed select-none"
+                              : invalidRow
                               ? "border-red-400 bg-red-50"
                               : "border-slate-300 bg-white"
                           }`}
@@ -264,6 +287,7 @@ export default function CapturaCantidades({
                           id={`input-tara-${globalIndex}`}
                           type="text"
                           inputMode="decimal"
+                          disabled={!isTaraEnabled}
                           value={item.pesoTara}
                           onChange={(e) =>
                             handleCellChange(globalIndex, "pesoTara", e.target.value)
@@ -272,8 +296,17 @@ export default function CapturaCantidades({
                             handleBlur(globalIndex, "pesoTara", e.target.value)
                           }
                           onKeyDown={(e) => handleKeyDown(e, globalIndex, "pesoTara")}
-                          placeholder="2.10"
-                          className="w-full max-w-[180px] px-3 py-1.5 border border-slate-300 rounded font-mono text-xs focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
+                          placeholder="0"
+                          title={
+                            !isTaraEnabled
+                              ? "Ingresa primero el peso bruto correspondiente"
+                              : ""
+                          }
+                          className={`w-full max-w-[180px] px-3 py-1.5 border rounded font-mono text-xs focus:outline-none focus:ring-2 focus:ring-blue-500 transition ${
+                            !isTaraEnabled
+                              ? "border-slate-200 bg-slate-100 text-slate-400 cursor-not-allowed select-none"
+                              : "border-slate-300 bg-white"
+                          }`}
                         />
                       )}
                     </td>

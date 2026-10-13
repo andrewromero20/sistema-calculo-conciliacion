@@ -10,7 +10,7 @@ export default function NuevoRegistroSePage() {
       <Sidebar activeView="se-nuevo" />
       <main className="main-content space-y-6">
         <Header
-          title="Nuevo Registro de Producto Semielaborado"
+          title="Nuevo registro (SE)"
           description="Flujo por etapas: validación de orden, captura de cantidades de tableteado y datos técnicos."
         />
 

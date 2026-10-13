@@ -59,9 +59,9 @@ export default function SeDetailPage() {
             <button
               type="button"
               onClick={() => router.push("/se")}
-              className="py-1.5 px-3 rounded bg-white border border-red-300 text-xs font-semibold text-red-800"
+              className="py-1.5 px-3.5 rounded-lg bg-[#1a2b45] hover:bg-[#142236] text-white text-xs font-semibold shadow-xs transition inline-flex items-center gap-1.5"
             >
-              Volver al catálogo SE
+              ← Volver al catálogo SE
             </button>
           </div>
         ) : (

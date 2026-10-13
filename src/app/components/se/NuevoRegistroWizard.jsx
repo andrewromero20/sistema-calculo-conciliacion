@@ -33,7 +33,7 @@ const INITIAL_STATE = {
   fechaFinRecubrimiento: "",
   pesos: Array.from({ length: 48 }, () => ({
     pesoBruto: "",
-    pesoTara: "2.10",
+    pesoTara: "0",
     pesoNeto: 0,
   })),
 };
@@ -55,6 +55,7 @@ export default function NuevoRegistroWizard() {
 
   // Modo plantilla y post-guardado
   const [templateMode, setTemplateMode] = useState(false);
+  const [ultimoRegistroGuardado, setUltimoRegistroGuardado] = useState(null);
   const [hasDraftNotice, setHasDraftNotice] = useState(false);
   const [successBanner, setSuccessBanner] = useState(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -66,6 +67,116 @@ export default function NuevoRegistroWizard() {
       window.dispatchEvent(new Event("se-draft-update"));
     }
   }, []);
+
+  // Cargar el último registro guardado para permitir rellenar plantilla (Item 14)
+  useEffect(() => {
+    fetch("/api/se")
+      .then((res) => (res.ok ? res.json() : []))
+      .then((data) => {
+        if (Array.isArray(data) && data.length > 0) {
+          const sorted = [...data].sort(
+            (a, b) => new Date(b.fechaCreacion) - new Date(a.fechaCreacion)
+          );
+          setUltimoRegistroGuardado(sorted[0]);
+        }
+      })
+      .catch((err) => console.error("Error al obtener último registro:", err));
+  }, []);
+
+  // Cálculo automático y en tiempo real de Cant. SAP, Acondicionar y Rendimiento (Items 9, 10, 11, 12)
+  useEffect(() => {
+    const pesoNeto = Number(values.pesoNetoTotalTabletas) || 0;
+    const pesoProm = Number(values.pesoPromedio) || 0;
+    const cantTabPorPza = Number(values.cantTabPorPza) || 1;
+    const tamanoLote = Number(values.tamanoLoteEstandar) || 0;
+
+    let cantSap = "";
+    let cantAcond = "";
+    let rend = "";
+
+    if (pesoNeto > 0 && pesoProm > 0) {
+      // 9. CANT. PZAS A CARGAR EN SAP = PESO NETO TOTAL (kg * 1000) / PESO PROMEDIO (g)
+      const piezas = Math.round((pesoNeto * 1000) / pesoProm);
+      cantSap = piezas;
+
+      // 10. CANT. PZAS A ACONDICIONAR = CANT. PZAS A CARGAR EN SAP / CANT DE TAB. POR PZA
+      if (cantTabPorPza > 0) {
+        cantAcond = Math.round(piezas / cantTabPorPza);
+      }
+
+      // 11. RENDIMIENTO TAB = ((PESO NETO TOTAL / PESO PROMEDIO) / TAMAÑO DEL LOTE ESTANDAR)
+      if (tamanoLote > 0) {
+        const r =
+          tamanoLote > 1000
+            ? (piezas / tamanoLote) * 100
+            : (pesoNeto / tamanoLote) * 100;
+        rend = Number(r.toFixed(1));
+      }
+    }
+
+    setValues((prev) => {
+      if (
+        prev.cantPzasCargarSap === cantSap &&
+        prev.cantPzasAcondicionar === cantAcond &&
+        prev.rendimientoTab === rend
+      ) {
+        return prev;
+      }
+      return {
+        ...prev,
+        cantPzasCargarSap: cantSap,
+        cantPzasAcondicionar: cantAcond,
+        rendimientoTab: rend,
+      };
+    });
+  }, [
+    values.pesoNetoTotalTabletas,
+    values.pesoPromedio,
+    values.cantTabPorPza,
+    values.tamanoLoteEstandar,
+  ]);
+
+  function handleRellenarConUltimoRegistro() {
+    if (!ultimoRegistroGuardado) return;
+    const prev = ultimoRegistroGuardado;
+    setTemplateMode(true);
+    setValues((curr) => ({
+      ...curr,
+      codigoMaterial: prev.codigoMaterial || "",
+      producto: prev.producto || "",
+      tamanoLoteEstandar: prev.tamanoLoteEstandar || "",
+      supervisorPreparacion: prev.supervisorPreparacion || "",
+      supervisorTabRecub: prev.supervisorTabRecub || "",
+      pesoPromedio: prev.pesoPromedio || "",
+      cantTabPorPza: prev.cantTabPorPza || "1",
+      muestrasTabRecub: prev.muestrasTabRecub || "",
+      ctecGranelSap: prev.ctecGranelSap || "",
+      fechaInicioTableteado: prev.fechaInicioTableteado
+        ? new Date(prev.fechaInicioTableteado).toISOString().slice(0, 16)
+        : "",
+      fechaFinTableteado: prev.fechaFinTableteado
+        ? new Date(prev.fechaFinTableteado).toISOString().slice(0, 16)
+        : "",
+      fechaInicioRecubrimiento: prev.fechaInicioRecubrimiento
+        ? new Date(prev.fechaInicioRecubrimiento).toISOString().slice(0, 16)
+        : "",
+      fechaFinPrimeraCarga: prev.fechaFinPrimeraCarga
+        ? new Date(prev.fechaFinPrimeraCarga).toISOString().slice(0, 16)
+        : "",
+      fechaFinRecubrimiento: prev.fechaFinRecubrimiento
+        ? new Date(prev.fechaFinRecubrimiento).toISOString().slice(0, 16)
+        : "",
+      pesos:
+        prev.pesos && prev.pesos.length > 0
+          ? Array.from({ length: 48 }, (_, i) => ({
+              pesoBruto: prev.pesos[i]?.pesoBruto ? String(prev.pesos[i].pesoBruto) : "",
+              pesoTara: prev.pesos[i]?.pesoTara !== undefined ? String(prev.pesos[i].pesoTara) : "0",
+              pesoNeto: Number(prev.pesos[i]?.pesoNeto) || 0,
+            }))
+          : curr.pesos,
+      pesoNetoTotalTabletas: Number(prev.pesoNetoTotalTabletas) || curr.pesoNetoTotalTabletas || 0,
+    }));
+  }
 
   // Verificar borrador al montar el componente
   useEffect(() => {
@@ -433,7 +544,7 @@ export default function NuevoRegistroWizard() {
         : "",
       pesos: Array.from({ length: 48 }, () => ({
         pesoBruto: "",
-        pesoTara: "2.10",
+        pesoTara: "0",
         pesoNeto: 0,
       })),
     });
@@ -604,6 +715,32 @@ export default function NuevoRegistroWizard() {
             </p>
           </div>
 
+          {/* Opción de rellenar plantilla con el último registro guardado (Item 14) */}
+          {ultimoRegistroGuardado && !templateMode && (
+            <div className="p-3.5 rounded-xl bg-blue-50/80 border border-blue-200 text-xs flex flex-wrap items-center justify-between gap-3 animate-in fade-in">
+              <div className="flex items-center gap-2.5">
+                <span className="w-8 h-8 rounded-lg bg-blue-100 text-blue-700 font-bold flex items-center justify-center shrink-0">
+                  <Icon name="copy" size={15} />
+                </span>
+                <div>
+                  <p className="font-bold text-blue-950">
+                    ¿Deseas reutilizar datos del último registro guardado?
+                  </p>
+                  <p className="text-[11px] text-blue-800">
+                    Orden: <strong>{ultimoRegistroGuardado.ordenGranel}</strong> · {ultimoRegistroGuardado.producto}
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={handleRellenarConUltimoRegistro}
+                className="py-1.5 px-3 rounded-lg bg-white border border-blue-300 hover:bg-blue-100/60 text-blue-800 font-bold text-xs shadow-2xs transition"
+              >
+                Rellenar plantilla
+              </button>
+            </div>
+          )}
+
           <form onSubmit={handleVerificarOrdenYContinuar} className="space-y-4">
             <div>
               <label
@@ -646,7 +783,7 @@ export default function NuevoRegistroWizard() {
                       ya se encuentra registrada en el sistema (Lote: {ordenExistenteInfo.registro?.lote}).
                     </p>
                     <p className="text-[11px] text-amber-700 mt-1">
-                      Si cometiste un error tipográfico, puedes corregir el número arriba. Si deseas consultar el registro existente, pulsa &quot;Examinar&quot;.
+                      Si deseas consultar el registro existente, pulsa &quot;Examinar&quot;.
                     </p>
                   </div>
                 </div>
@@ -699,7 +836,7 @@ export default function NuevoRegistroWizard() {
               <button
                 type="button"
                 onClick={() => setCurrentStep(1)}
-                className="py-1.5 px-3 rounded-lg border border-slate-300 hover:bg-slate-100 text-slate-700 text-xs font-medium transition"
+                className="py-1.5 px-3.5 rounded-lg bg-[#1a2b45] hover:bg-[#142236] text-white text-xs font-semibold shadow-xs transition inline-flex items-center gap-1.5"
               >
                 ← Volver al Paso 1
               </button>
@@ -708,7 +845,7 @@ export default function NuevoRegistroWizard() {
                 onClick={handleContinuarADatos}
                 className="py-1.5 px-4 rounded-lg bg-[#0d6efd] hover:bg-[#0b5ed7] text-white text-xs font-bold shadow-xs transition"
               >
-                Siguiente: Datos Técnicos →
+                Continuar a Datos Técnicos →
               </button>
             </div>
           </div>
@@ -724,7 +861,7 @@ export default function NuevoRegistroWizard() {
             <button
               type="button"
               onClick={() => setCurrentStep(1)}
-              className="py-2 px-4 rounded-lg border border-slate-300 bg-white hover:bg-slate-50 text-slate-700 text-xs font-semibold transition"
+              className="py-2 px-4 rounded-lg bg-[#1a2b45] hover:bg-[#142236] text-white text-xs font-semibold shadow-xs transition inline-flex items-center gap-1.5"
             >
               ← Volver
             </button>
@@ -755,7 +892,7 @@ export default function NuevoRegistroWizard() {
               <button
                 type="button"
                 onClick={() => setCurrentStep(2)}
-                className="py-1.5 px-3 rounded-lg border border-slate-300 hover:bg-slate-100 text-slate-700 text-xs font-medium transition"
+                className="py-1.5 px-3.5 rounded-lg bg-[#1a2b45] hover:bg-[#142236] text-white text-xs font-semibold shadow-xs transition inline-flex items-center gap-1.5"
               >
                 ← Volver a Cantidades
               </button>
@@ -765,7 +902,7 @@ export default function NuevoRegistroWizard() {
                 disabled={isSubmitting}
                 className="py-1.5 px-5 rounded-lg bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 text-white text-xs font-bold shadow-xs transition"
               >
-                {isSubmitting ? "Guardando..." : "Guardar Registro SE"}
+                {isSubmitting ? "Guardando..." : "Confirmar y Guardar Registro"}
               </button>
             </div>
           </div>
@@ -782,7 +919,7 @@ export default function NuevoRegistroWizard() {
             <button
               type="button"
               onClick={() => setCurrentStep(2)}
-              className="py-2 px-4 rounded-lg border border-slate-300 bg-white hover:bg-slate-50 text-slate-700 text-xs font-semibold transition"
+              className="py-2 px-4 rounded-lg bg-[#1a2b45] hover:bg-[#142236] text-white text-xs font-semibold shadow-xs transition inline-flex items-center gap-1.5"
             >
               ← Volver a Cantidades
             </button>
@@ -792,7 +929,7 @@ export default function NuevoRegistroWizard() {
               disabled={isSubmitting}
               className="py-2.5 px-8 rounded-lg bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 text-white text-xs font-bold shadow-md transition"
             >
-              {isSubmitting ? "Guardando..." : "✓ Confirmar y Guardar Registro"}
+              {isSubmitting ? "Guardando..." : "Confirmar y Guardar Registro"}
             </button>
           </div>
         </div>
@@ -813,13 +950,10 @@ export default function NuevoRegistroWizard() {
               <h3 className="text-lg font-bold text-slate-900">
                 ¡Registro guardado con éxito!
               </h3>
-              <p className="text-xs text-slate-600">
-                {successBanner.message}
+              <p className="text-sm text-slate-700">
+                Orden <strong>{successBanner.record?.ordenGranel}</strong> con lote{" "}
+                <strong>{successBanner.record?.lote}</strong> guardada exitosamente
               </p>
-              <div className="py-2 px-3 bg-slate-50 border border-slate-200 rounded-lg inline-block font-mono text-xs text-slate-800">
-                Orden: <strong>{successBanner.record?.ordenGranel}</strong> · Lote:{" "}
-                <strong>{successBanner.record?.lote}</strong>
-              </div>
             </div>
 
             <div className="bg-blue-50/70 p-4 rounded-xl border border-blue-200 text-center space-y-1">

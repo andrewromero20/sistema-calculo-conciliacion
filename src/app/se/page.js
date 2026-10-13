@@ -41,7 +41,7 @@ export default function SeDashboardPage() {
       <Sidebar activeView="se-inicio" />
       <main className="main-content space-y-6">
         <Header
-          title="Producto Semielaborado (SE)"
+          title="Inicio (SE)"
           description="Control de pesadas, tableteado, recubrimiento y órdenes a granel."
         />
 

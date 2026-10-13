@@ -18,16 +18,6 @@ export default function SeHistorialPage() {
   // Búsqueda rápida
   const [searchTerm, setSearchTerm] = useState("");
 
-  // Filtros avanzados (Figma Comments 11, 12, 13 & nodos 96:140)
-  const [showAdvancedFilters, setShowAdvancedFilters] = useState(false);
-  const [filtroCodigoMaterial, setFiltroCodigoMaterial] = useState("");
-  const [filtroProducto, setFiltroProducto] = useState("");
-  const [filtroSupervisor, setFiltroSupervisor] = useState("");
-  const [filtroRendMin, setFiltroRendMin] = useState("");
-  const [filtroRendMax, setFiltroRendMax] = useState("");
-  const [filtroFechaDesde, setFiltroFechaDesde] = useState("");
-  const [filtroFechaHasta, setFiltroFechaHasta] = useState("");
-
   // Paginación
   const [currentPage, setCurrentPage] = useState(1);
 
@@ -38,7 +28,7 @@ export default function SeHistorialPage() {
         return res.json();
       })
       .then((data) => {
-        // Orden cronológico por última modificación / creación (Figma Comment 10)
+        // Orden cronológico por última modificación / creación
         const sorted = Array.isArray(data)
           ? [...data].sort((a, b) => new Date(b.fechaCreacion) - new Date(a.fechaCreacion))
           : [];
@@ -48,112 +38,24 @@ export default function SeHistorialPage() {
       .finally(() => setLoading(false));
   }, []);
 
-  // Lista única de productos, códigos y supervisores para autocompletar filtros
-  const listaProductos = useMemo(() => {
-    return Array.from(new Set(registros.map((r) => r.producto).filter(Boolean)));
-  }, [registros]);
-
-  const listaCodigos = useMemo(() => {
-    return Array.from(new Set(registros.map((r) => r.codigoMaterial).filter(Boolean)));
-  }, [registros]);
-
-  const listaSupervisores = useMemo(() => {
-    const set = new Set();
-    registros.forEach((r) => {
-      if (r.supervisorPreparacion) set.add(r.supervisorPreparacion);
-      if (r.supervisorTabRecub) set.add(r.supervisorTabRecub);
-    });
-    return Array.from(set);
-  }, [registros]);
-
-  // Filtrado compuesto
+  // Filtrado por término de búsqueda
   const filtered = useMemo(() => {
+    if (!searchTerm.trim()) return registros;
+    const term = searchTerm.toLowerCase().trim();
     return registros.filter((item) => {
-      // 1. Buscador rápido por número de orden o lote (Figma Comment 11)
-      if (searchTerm.trim()) {
-        const term = searchTerm.toLowerCase().trim();
-        const matchesOrden = item.ordenGranel?.toLowerCase().includes(term);
-        const matchesLote = item.lote?.toLowerCase().includes(term);
-        const matchesProd = item.producto?.toLowerCase().includes(term);
-        const matchesCod = item.codigoMaterial?.toLowerCase().includes(term);
-        if (!matchesOrden && !matchesLote && !matchesProd && !matchesCod) return false;
-      }
-
-      // 2. Filtro por código de material (Figma 96:140)
-      if (filtroCodigoMaterial) {
-        if (!item.codigoMaterial?.toLowerCase().includes(filtroCodigoMaterial.toLowerCase())) {
-          return false;
-        }
-      }
-
-      // 3. Filtro por producto
-      if (filtroProducto) {
-        if (!item.producto?.toLowerCase().includes(filtroProducto.toLowerCase())) {
-          return false;
-        }
-      }
-
-      // 4. Filtro por supervisor
-      if (filtroSupervisor) {
-        const supTerm = filtroSupervisor.toLowerCase();
-        const supPrep = item.supervisorPreparacion?.toLowerCase() || "";
-        const supTab = item.supervisorTabRecub?.toLowerCase() || "";
-        if (!supPrep.includes(supTerm) && !supTab.includes(supTerm)) {
-          return false;
-        }
-      }
-
-      // 5. Filtro por rango de rendimiento (%)
-      const rend = Number(item.rendimientoTab) || 0;
-      if (filtroRendMin !== "" && rend < Number(filtroRendMin)) {
-        return false;
-      }
-      if (filtroRendMax !== "" && rend > Number(filtroRendMax)) {
-        return false;
-      }
-
-      // 6. Filtro por rango de fechas
-      if (filtroFechaDesde) {
-        const itemDate = new Date(item.fechaCreacion).toISOString().slice(0, 10);
-        if (itemDate < filtroFechaDesde) return false;
-      }
-      if (filtroFechaHasta) {
-        const itemDate = new Date(item.fechaCreacion).toISOString().slice(0, 10);
-        if (itemDate > filtroFechaHasta) return false;
-      }
-
-      return true;
+      return (
+        item.ordenGranel?.toLowerCase().includes(term) ||
+        item.lote?.toLowerCase().includes(term) ||
+        item.producto?.toLowerCase().includes(term) ||
+        item.codigoMaterial?.toLowerCase().includes(term)
+      );
     });
-  }, [
-    registros,
-    searchTerm,
-    filtroCodigoMaterial,
-    filtroProducto,
-    filtroSupervisor,
-    filtroRendMin,
-    filtroRendMax,
-    filtroFechaDesde,
-    filtroFechaHasta,
-  ]);
+  }, [registros, searchTerm]);
 
   function limpiarFiltros() {
     setSearchTerm("");
-    setFiltroCodigoMaterial("");
-    setFiltroProducto("");
-    setFiltroSupervisor("");
-    setFiltroRendMin("");
-    setFiltroRendMax("");
-    setFiltroFechaDesde("");
-    setFiltroFechaHasta("");
     setCurrentPage(1);
   }
-
-  const activeFilterCount =
-    (filtroCodigoMaterial ? 1 : 0) +
-    (filtroProducto ? 1 : 0) +
-    (filtroSupervisor ? 1 : 0) +
-    (filtroRendMin || filtroRendMax ? 1 : 0) +
-    (filtroFechaDesde || filtroFechaHasta ? 1 : 0);
 
   // Paginación
   const totalPages = Math.ceil(filtered.length / PAGE_SIZE) || 1;
@@ -168,28 +70,31 @@ export default function SeHistorialPage() {
       <Sidebar activeView="se-historial" />
       <main className="main-content space-y-6">
         <Header
-          title="Historial de Producto Semielaborado"
-          description="Consulta cronológica completa, filtros avanzados y examinación de parámetros por orden."
+          title="Historial de registros (SE)"
+          description="Consulta cronológica completa y examinación de parámetros por orden."
         />
 
-        {/* Barra de Búsqueda y Botón de Filtros Avanzados (Figma 84:281) */}
-        <div className="bg-white p-5 rounded-xl border border-slate-200 shadow-xs space-y-4">
+        {/* Barra de Búsqueda sin filtros avanzados */}
+        <div className="bg-white p-5 rounded-xl border border-slate-200 shadow-xs">
           <div className="flex flex-wrap items-center justify-between gap-3">
             <div className="flex-1 min-w-[260px] max-w-md relative">
               <input
                 type="text"
                 value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
+                onChange={(e) => {
+                  setSearchTerm(e.target.value);
+                  setCurrentPage(1);
+                }}
                 placeholder="Buscar por número de orden o lote..."
-                className="w-full pl-9 pr-4 py-2 text-xs border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 font-medium"
+                className="w-full pl-9 pr-8 py-2 text-xs border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 font-medium"
               />
-              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-xs">
-                🔍
+              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400">
+                <Icon name="search" size={15} />
               </span>
               {searchTerm && (
                 <button
                   type="button"
-                  onClick={() => setSearchTerm("")}
+                  onClick={limpiarFiltros}
                   className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 text-xs"
                 >
                   ✕
@@ -197,157 +102,17 @@ export default function SeHistorialPage() {
               )}
             </div>
 
-            <div className="flex items-center gap-2">
-              <button
-                type="button"
-                onClick={() => setShowAdvancedFilters(!showAdvancedFilters)}
-                className={`py-2 px-3.5 rounded-lg border text-xs font-semibold transition flex items-center gap-2 shadow-xs ${
-                  showAdvancedFilters || activeFilterCount > 0
-                    ? "bg-blue-50 border-blue-300 text-blue-900"
-                    : "bg-white border-slate-300 hover:bg-slate-50 text-slate-700"
-                }`}
-              >
-                <Icon name="search" size={14} />
-                <span>Filtros avanzados</span>
-                {activeFilterCount > 0 && (
-                  <span className="w-5 h-5 rounded-full bg-[#0d6efd] text-white text-[10px] flex items-center justify-center font-bold">
-                    {activeFilterCount}
-                  </span>
-                )}
-              </button>
-
-              <Link
-                href="/se/nuevo"
-                className="py-2 px-4 rounded-lg bg-[#0d6efd] hover:bg-[#0b5ed7] text-white text-xs font-bold transition flex items-center gap-1.5 shadow-xs"
-              >
-                <Icon name="plus" size={14} />
-                <span>Nuevo Registro</span>
-              </Link>
-            </div>
+            <Link
+              href="/se/nuevo"
+              className="py-2 px-4 rounded-lg bg-[#0d6efd] hover:bg-[#0b5ed7] text-white text-xs font-bold transition flex items-center gap-1.5 shadow-xs"
+            >
+              <Icon name="plus" size={14} />
+              <span>Nuevo Registro</span>
+            </Link>
           </div>
-
-          {/* Panel Desplegable de Filtros Avanzados (Figma Comments 12-13 & nodo 96:140) */}
-          {showAdvancedFilters && (
-            <div className="pt-4 border-t border-slate-100 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4 animate-in fade-in duration-200">
-              {/* Filtro por Código de Material (Figma 96:140) */}
-              <div>
-                <label className="block text-[11px] font-bold text-slate-700 uppercase tracking-wider mb-1">
-                  Código Material
-                </label>
-                <select
-                  value={filtroCodigoMaterial}
-                  onChange={(e) => setFiltroCodigoMaterial(e.target.value)}
-                  className="w-full px-2.5 py-1.5 text-xs border border-slate-300 rounded-lg bg-white focus:outline-none focus:ring-1 focus:ring-blue-500 font-mono"
-                >
-                  <option value="">Todos los códigos</option>
-                  {listaCodigos.map((c) => (
-                    <option key={c} value={c}>
-                      {c}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              {/* Filtro por Producto */}
-              <div>
-                <label className="block text-[11px] font-bold text-slate-700 uppercase tracking-wider mb-1">
-                  Producto
-                </label>
-                <select
-                  value={filtroProducto}
-                  onChange={(e) => setFiltroProducto(e.target.value)}
-                  className="w-full px-2.5 py-1.5 text-xs border border-slate-300 rounded-lg bg-white focus:outline-none focus:ring-1 focus:ring-blue-500"
-                >
-                  <option value="">Todos los productos</option>
-                  {listaProductos.map((p) => (
-                    <option key={p} value={p}>
-                      {p}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              {/* Filtro por Supervisor */}
-              <div>
-                <label className="block text-[11px] font-bold text-slate-700 uppercase tracking-wider mb-1">
-                  Supervisor
-                </label>
-                <select
-                  value={filtroSupervisor}
-                  onChange={(e) => setFiltroSupervisor(e.target.value)}
-                  className="w-full px-2.5 py-1.5 text-xs border border-slate-300 rounded-lg bg-white focus:outline-none focus:ring-1 focus:ring-blue-500"
-                >
-                  <option value="">Todos los supervisores</option>
-                  {listaSupervisores.map((s) => (
-                    <option key={s} value={s}>
-                      {s}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              {/* Filtro por Rango de Rendimiento */}
-              <div>
-                <label className="block text-[11px] font-bold text-slate-700 uppercase tracking-wider mb-1">
-                  Rendimiento (%)
-                </label>
-                <div className="flex items-center gap-2">
-                  <input
-                    type="number"
-                    placeholder="Mín %"
-                    value={filtroRendMin}
-                    onChange={(e) => setFiltroRendMin(e.target.value)}
-                    className="w-1/2 px-2 py-1.5 text-xs border border-slate-300 rounded-lg font-mono"
-                  />
-                  <span className="text-slate-400">-</span>
-                  <input
-                    type="number"
-                    placeholder="Máx %"
-                    value={filtroRendMax}
-                    onChange={(e) => setFiltroRendMax(e.target.value)}
-                    className="w-1/2 px-2 py-1.5 text-xs border border-slate-300 rounded-lg font-mono"
-                  />
-                </div>
-              </div>
-
-              {/* Filtro por Rango de Fechas */}
-              <div>
-                <label className="block text-[11px] font-bold text-slate-700 uppercase tracking-wider mb-1">
-                  Rango de Fechas
-                </label>
-                <div className="flex items-center gap-1.5">
-                  <input
-                    type="date"
-                    value={filtroFechaDesde}
-                    onChange={(e) => setFiltroFechaDesde(e.target.value)}
-                    className="w-1/2 px-1.5 py-1 text-xs border border-slate-300 rounded-lg font-mono text-[11px]"
-                  />
-                  <input
-                    type="date"
-                    value={filtroFechaHasta}
-                    onChange={(e) => setFiltroFechaHasta(e.target.value)}
-                    className="w-1/2 px-1.5 py-1 text-xs border border-slate-300 rounded-lg font-mono text-[11px]"
-                  />
-                </div>
-              </div>
-
-              {/* Botón para Limpiar */}
-              {activeFilterCount > 0 && (
-                <div className="col-span-full flex justify-end">
-                  <button
-                    type="button"
-                    onClick={limpiarFiltros}
-                    className="text-xs text-blue-600 hover:text-blue-800 font-semibold"
-                  >
-                    Restablecer todos los filtros
-                  </button>
-                </div>
-              )}
-            </div>
-          )}
         </div>
 
-        {/* Tabla de Resultados (Figma 84:281) */}
+        {/* Tabla de Resultados */}
         <div className="bg-white rounded-xl border border-slate-200 shadow-xs overflow-hidden">
           {loading ? (
             <div className="p-12 text-center text-xs text-slate-500">
@@ -362,13 +127,15 @@ export default function SeHistorialPage() {
               <p className="font-semibold text-slate-700">
                 No se encontraron registros que coincidan con la búsqueda.
               </p>
-              <button
-                type="button"
-                onClick={limpiarFiltros}
-                className="text-blue-600 hover:underline font-semibold"
-              >
-                Limpiar filtros aplicados
-              </button>
+              {searchTerm && (
+                <button
+                  type="button"
+                  onClick={limpiarFiltros}
+                  className="text-blue-600 hover:underline font-semibold"
+                >
+                  Limpiar búsqueda
+                </button>
+              )}
             </div>
           ) : (
             <>
@@ -386,19 +153,19 @@ export default function SeHistorialPage() {
                         Producto
                       </th>
                       <th scope="col" className="px-4 py-3">
-                        Supervisor Tab.
-                      </th>
-                      <th scope="col" className="px-4 py-3">
-                        Peso Neto Total
-                      </th>
-                      <th scope="col" className="px-4 py-3">
                         Rendimiento
+                      </th>
+                      <th scope="col" className="px-4 py-3">
+                        Fin Tableteado
+                      </th>
+                      <th scope="col" className="px-4 py-3">
+                        Fin 1ra Carga
                       </th>
                       <th scope="col" className="px-4 py-3">
                         Fecha Registro
                       </th>
                       <th scope="col" className="px-4 py-3 text-center">
-                        Acción
+                        <span className="sr-only">Examinar</span>
                       </th>
                     </tr>
                   </thead>
@@ -422,12 +189,6 @@ export default function SeHistorialPage() {
                             {item.codigoMaterial}
                           </span>
                         </td>
-                        <td className="px-4 py-3 text-slate-600">
-                          {item.supervisorTabRecub || item.supervisorPreparacion || "-"}
-                        </td>
-                        <td className="px-4 py-3 font-mono font-bold text-slate-900">
-                          {Number(item.pesoNetoTotalTabletas || 0).toFixed(2)} kg
-                        </td>
                         <td className="px-4 py-3 font-mono font-bold">
                           <span
                             className={`px-2 py-0.5 rounded text-[11px] ${
@@ -440,11 +201,17 @@ export default function SeHistorialPage() {
                             {Number(item.rendimientoTab || 0).toFixed(1)}%
                           </span>
                         </td>
+                        <td className="px-4 py-3 text-slate-600 whitespace-nowrap">
+                          {item.fechaFinTableteado ? formatDateTime(item.fechaFinTableteado) : "-"}
+                        </td>
+                        <td className="px-4 py-3 text-slate-600 whitespace-nowrap">
+                          {item.fechaFinPrimeraCarga ? formatDateTime(item.fechaFinPrimeraCarga) : "-"}
+                        </td>
                         <td className="px-4 py-3 text-slate-500 whitespace-nowrap">
                           {formatDateTime(item.fechaCreacion)}
                         </td>
                         <td className="px-4 py-3 text-center">
-                          {/* Botón Examinar (Figma Comment 14 & 18) */}
+                          {/* Botón Examinar */}
                           <Link
                             href={`/se/${encodeURIComponent(item.ordenGranel)}`}
                             className="inline-flex items-center gap-1.5 py-1 px-3 rounded-md bg-[#0d6efd] hover:bg-[#0b5ed7] text-white text-xs font-bold transition shadow-xs"
@@ -459,7 +226,7 @@ export default function SeHistorialPage() {
                 </table>
               </div>
 
-              {/* Paginación Google de máx 6 botones (Figma Comment 16) */}
+              {/* Paginación Google de máx 6 botones */}
               <div className="p-4 border-t border-slate-200 bg-slate-50/50">
                 <GooglePagination
                   currentPage={safeCurrentPage}

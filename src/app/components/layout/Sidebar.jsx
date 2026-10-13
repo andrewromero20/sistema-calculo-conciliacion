@@ -112,14 +112,14 @@ export default function Sidebar({ activeView }) {
 
   return (
     <aside className="sidebar">
-      <div className="brand">
+      <Link href={role === "USER_SE" ? "/se" : "/pt"} className="brand hover:opacity-90 transition">
         <span className="brand-icon">
           <Icon name="calculator" size={21} />
         </span>
-        <span>
-          Conciliación<br />de Materiales
+        <span className="text-sm font-bold text-white tracking-tight">
+          Conciliación de Materiales
         </span>
-      </div>
+      </Link>
 
       <nav className="nav-list" aria-label="Navegación principal">
         {items.map((item) => (

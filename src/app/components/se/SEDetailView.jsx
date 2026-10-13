@@ -115,6 +115,58 @@ export default function SEDetailView({
     }));
   }
 
+  // Recalcular campos automáticos en modo edición (Items 9, 10, 11, 12)
+  useEffect(() => {
+    if (!isEditing) return;
+    const pesoNeto = Number(formValues.pesoNetoTotalTabletas) || 0;
+    const pesoProm = Number(formValues.pesoPromedio) || 0;
+    const cantTabPorPza = Number(formValues.cantTabPorPza) || 1;
+    const tamanoLote = Number(formValues.tamanoLoteEstandar) || 0;
+
+    let cantSap = "";
+    let cantAcond = "";
+    let rend = "";
+
+    if (pesoNeto > 0 && pesoProm > 0) {
+      const piezas = Math.round((pesoNeto * 1000) / pesoProm);
+      cantSap = piezas;
+
+      if (cantTabPorPza > 0) {
+        cantAcond = Math.round(piezas / cantTabPorPza);
+      }
+
+      if (tamanoLote > 0) {
+        const r =
+          tamanoLote > 1000
+            ? (piezas / tamanoLote) * 100
+            : (pesoNeto / tamanoLote) * 100;
+        rend = Number(r.toFixed(1));
+      }
+    }
+
+    setFormValues((prev) => {
+      if (
+        prev.cantPzasCargarSap === cantSap &&
+        prev.cantPzasAcondicionar === cantAcond &&
+        prev.rendimientoTab === rend
+      ) {
+        return prev;
+      }
+      return {
+        ...prev,
+        cantPzasCargarSap: cantSap,
+        cantPzasAcondicionar: cantAcond,
+        rendimientoTab: rend,
+      };
+    });
+  }, [
+    isEditing,
+    formValues.pesoNetoTotalTabletas,
+    formValues.pesoPromedio,
+    formValues.cantTabPorPza,
+    formValues.tamanoLoteEstandar,
+  ]);
+
   // Calcular diff para el modal de auditoría
   const diffPreview = useMemo(() => {
     const diff = {};
@@ -244,7 +296,7 @@ export default function SEDetailView({
         <div className="flex items-center gap-3">
           <Link
             href={isPTView ? "/pt/se" : "/se/historial"}
-            className="py-1.5 px-3 rounded-lg border border-slate-300 hover:bg-slate-100 text-slate-700 text-xs font-semibold transition flex items-center gap-1.5"
+            className="py-1.5 px-3.5 rounded-lg bg-[#1a2b45] hover:bg-[#142236] text-white text-xs font-semibold shadow-xs transition inline-flex items-center gap-1.5"
           >
             <span>←</span>
             <span>Volver a la lista</span>

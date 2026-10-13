@@ -255,6 +255,41 @@ label { display: block; font-weight: 600; margin-bottom: 8px; }input, select { w
   font-weight: 700;
 }
 
+.matrix-actions-row td {
+  background: #f8fafc;
+}
+
+.matrix-save-area {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+}
+
+.matrix-save-button {
+  width: 100%;
+  min-height: 36px;
+}
+
+.matrix-save-message {
+  display: block;
+  font-size: 10px;
+  line-height: 1.35;
+  white-space: normal;
+}
+
+.matrix-save-message.success {
+  color: #176b3a;
+}
+
+.matrix-save-message.error {
+  color: #b42318;
+}
+
+.matrix-pending-support {
+  color: var(--muted);
+  font-size: 11px;
+}
+
 .legacy-materials-view {
   padding: 13px 14px;
   border: 1px solid var(--line);

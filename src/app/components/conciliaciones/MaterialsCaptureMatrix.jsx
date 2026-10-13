@@ -14,7 +14,7 @@ import {
   useMemo,
   useState,
 } from "react";
-import { crearMaterial, actualizarMaterial } from "../../../services/materialesService";
+import { actualizarMaterial,crearMaterial } from "../../../services/materialesService";
 import {
   MATERIAL_DEFINITIONS,
   getMaterialDefinition,
@@ -304,6 +304,29 @@ function MatrixNumberInput({
       {unit && <small>{unit}</small>}
     </div>
   );
+}
+
+function formatMaterialLimit(material) {
+  switch (material.descripcion) {
+    case "TABLETA":
+    case "FOIL PVC":
+    case "SELLO GARANTÍA":
+      return "± 7.00 %";
+
+    case "CAJA PLEGADIZA":
+    case "INSTRUCTIVO":
+      return "± 1.00 %";
+
+    case "ETIQUETA COLECTIVA":
+    case "CAJA EMPAQUE":
+      return "± 10 PZA";
+
+    case "FOIL ALUMINIO":
+      return "± 2.000 kg";
+
+    default:
+      return "Pendiente";
+  }
 }
 
 export default function MaterialsCaptureMatrix({
@@ -830,6 +853,327 @@ const [ materialMessages,setMaterialMessages,] = useState({});
                     );
                 })}
                 </tr>
+                <tr className="matrix-group-row">
+                    <td colSpan={materials.length + 1}>
+                        Cantidad utilizada
+                    </td>
+                </tr>   
+                <tr>
+                    <th className="matrix-concept-column">
+                        E. Merma pura
+                    </th>
+
+                    {materials.map((material) => {
+                        const isFoilPvc =
+                        material.descripcion === "FOIL PVC";
+
+                        const draft = drafts[material.id];
+
+                        return (
+                        <td key={material.id}>
+                            {isFoilPvc ? (
+                            <MatrixNumberInput
+                                value={draft?.resultadoE ?? ""}
+                                unit="kg"
+                                onChange={(value) =>
+                                updateDraft(
+                                    material.id,
+                                    "resultadoE",
+                                    value,
+                                )
+                                }
+                            />
+                            ) : (
+                            formatQuantity(
+                                material.resultadoE,
+                                material.unidadMedida,
+                            )
+                            )}
+                        </td>
+                        );
+                    })}
+                </tr>
+                <tr>
+                    <th className="matrix-concept-column">
+                        F. Cantidad utilizada real
+                    </th>
+
+                    {materials.map((material) => {
+                        const isFoilPvc =
+                        material.descripcion === "FOIL PVC";
+
+                        const draft = drafts[material.id];
+
+                        return (
+                        <td key={material.id}>
+                            {isFoilPvc ? (
+                            <MatrixNumberInput
+                                value={draft?.resultadoF ?? ""}
+                                unit="kg"
+                                onChange={(value) =>
+                                updateDraft(
+                                    material.id,
+                                    "resultadoF",
+                                    value,
+                                )
+                                }
+                            />
+                            ) : (
+                            formatQuantity(
+                                material.resultadoF,
+                                material.unidadMedida,
+                            )
+                            )}
+                        </td>
+                        );
+                    })}
+                </tr>
+                <tr>
+                    <th className="matrix-concept-column">
+                        G. Muestras
+                    </th>
+
+                    {materials.map((material) => (
+                        <td
+                        key={material.id}
+                        className="matrix-calculated-cell"
+                        >
+                        {material.descripcion === "FOIL PVC" || material.descripcion == "FOIL ALUMINIO"
+                            ? "No aplica"
+                            : formatQuantity(
+                                material.resultadoG,
+                                material.unidadMedida,
+                            )}
+                        </td>
+                    ))}
+                </tr>
+                
+                <tr>
+                    <th className="matrix-concept-column">
+                        H. Total utilizado
+                    </th>
+
+                    {materials.map((material) => {
+                        const isFoilPvc =
+                        material.descripcion === "FOIL PVC";
+
+                        const preview = isFoilPvc
+                        ? calculateFoilPvcPreview(
+                            drafts[material.id],
+                            )
+                        : null;
+
+                        const value = isFoilPvc
+                        ? preview.totalUtilizadaH
+                        : material.totalUtilizadaH;
+
+                        return (
+                        <td
+                            key={material.id}
+                            className="matrix-calculated-cell"
+                        >
+                            {formatQuantity(
+                            value,
+                            material.unidadMedida,
+                            )}
+                        </td>
+                        );
+                    })}
+                </tr>
+                <tr className="matrix-group-row">
+                    <td colSpan={materials.length + 1}>
+                        Evaluación final
+                    </td>
+                </tr>
+                <tr>
+                    <th className="matrix-concept-column">
+                        Diferencia
+                    </th>
+
+                    {materials.map((material) => {
+                        const isFoilPvc =
+                        material.descripcion === "FOIL PVC";
+
+                        const preview = isFoilPvc
+                        ? calculateFoilPvcPreview(
+                            drafts[material.id],
+                            )
+                        : null;
+
+                        const value = isFoilPvc
+                        ? preview.diferencia
+                        : material.diferencia;
+
+                        return (
+                        <td
+                            key={material.id}
+                            className="matrix-calculated-cell"
+                        >
+                            {formatQuantity(
+                            value,
+                            material.unidadMedida,
+                            )}
+                        </td>
+                        );
+                    })}
+                </tr>
+                <tr>
+                    <th className="matrix-concept-column">
+                        Porcentaje de diferencia
+                    </th>
+
+                    {materials.map((material) => {
+                        const isFoilPvc =
+                        material.descripcion === "FOIL PVC";
+
+                        const isFoilAluminio =
+                        material.descripcion ===
+                        "FOIL ALUMINIO";
+
+                        const preview = isFoilPvc
+                        ? calculateFoilPvcPreview(
+                            drafts[material.id],
+                            )
+                        : null;
+
+                        if (isFoilAluminio) {
+                        return (
+                            <td
+                            key={material.id}
+                            className="matrix-calculated-cell"
+                            >
+                            No aplica
+                            </td>
+                        );
+                        }
+
+                        const porcentaje = isFoilPvc
+                        ? preview.porcentajeDiferencia
+                        : material.porcentajeDiferencia;
+
+                        const totalRecibido = isFoilPvc
+                        ? preview.totalRecibidaD
+                        : material.totalRecibidaD;
+
+                        return (
+                        <td
+                            key={material.id}
+                            className="matrix-calculated-cell"
+                        >
+                            {formatPercentage(
+                            porcentaje,
+                            totalRecibido,
+                            )}
+                        </td>
+                        );
+                    })}
+                </tr>
+
+                <tr>
+                    <th className="matrix-concept-column">
+                        Límite permitido
+                    </th>
+
+                    {materials.map((material) => (
+                        <td
+                        key={material.id}
+                        className="matrix-calculated-cell"
+                        >
+                        {formatMaterialLimit(material)}
+                        </td>
+                    ))}
+                </tr>
+                <tr>
+                    <th className="matrix-concept-column">
+                        Estado
+                    </th>
+
+                    {materials.map((material) => {
+                        const isFoilPvc =
+                        material.descripcion === "FOIL PVC";
+
+                        const preview = isFoilPvc
+                        ? calculateFoilPvcPreview(
+                            drafts[material.id],
+                            )
+                        : null;
+
+                        const status = isFoilPvc
+                        ? preview.estadoMaterial
+                        : material.estadoMaterial;
+
+                        return (
+                        <td key={material.id}>
+                            <span
+                            className={`status-badge material-status-${String(
+                                status ?? "PENDIENTE",
+                            )
+                                .toLowerCase()
+                                .replaceAll("_", "-")}`}
+                            >
+                            {formatMaterialStatus(status)}
+                            </span>
+                        </td>
+                        );
+                    })}
+                </tr>
+
+                <tr className="matrix-actions-row">
+                    <th className="matrix-concept-column">
+                        Acciones
+                    </th>
+
+                    {materials.map((material) => {
+                        const isFoilPvc =
+                        material.descripcion === "FOIL PVC";
+
+                        const isSaving = Boolean(
+                        savingMaterialIds[material.id],
+                        );
+
+                        const message =
+                        materialMessages[material.id];
+
+                        return (
+                        <td key={material.id}>
+                            {isFoilPvc ? (
+                            <div className="matrix-save-area">
+                                <button
+                                type="button"
+                                className="button primary matrix-save-button"
+                                disabled={isSaving}
+                                onClick={() =>
+                                    saveFoilPvc(material)
+                                }
+                                >
+                                {isSaving
+                                    ? "Guardando..."
+                                    : "Guardar"}
+                                </button>
+
+                                {message && (
+                                <small
+                                    className={
+                                    message ===
+                                    "Guardado correctamente."
+                                        ? "matrix-save-message success"
+                                        : "matrix-save-message error"
+                                    }
+                                >
+                                    {message}
+                                </small>
+                                )}
+                            </div>
+                            ) : (
+                            <span className="matrix-pending-support">
+                                Próximamente
+                            </span>
+                            )}
+                        </td>
+                        );
+                    })}
+                    </tr>
+
             </tbody>
           </table>
         </div>

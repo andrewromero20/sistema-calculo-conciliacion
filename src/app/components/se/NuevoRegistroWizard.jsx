@@ -94,13 +94,12 @@ export default function NuevoRegistroWizard() {
         setValues((prev) => ({ ...prev, ...parsed }));
         if (parsed.currentStep && parsed.currentStep >= 1 && parsed.currentStep <= 3) {
           setCurrentStep(parsed.currentStep);
-        } else if (parsed.ordenGranel) {
+        } else if (parsed.ordenGranel && Number(parsed.currentStep) >= 2) {
           setCurrentStep(2);
         }
         setHasDraftNotice(false);
-      } else {
-        // El usuario salió de la aplicación (cerró ventana/pestaña o sesión):
-        // Mostrar aviso permitiendo restaurar o empezar de cero
+      } else if (Number(parsed.currentStep) >= 2) {
+        // El usuario salió de la aplicación: solo mostrar aviso si la captura estaba en el Paso 2 o superior
         setHasDraftNotice(true);
       }
     } catch (e) {
@@ -210,7 +209,7 @@ export default function NuevoRegistroWizard() {
     const orden = String(values.ordenGranel || "").trim();
     if (!orden || orden.length < 2) {
       setOrdenError("Por favor ingresa un número de orden válido (mínimo 2 caracteres).");
-      return;
+      return false;
     }
 
     setIsCheckingOrden(true);
@@ -225,13 +224,16 @@ export default function NuevoRegistroWizard() {
       if (data.exists) {
         // La orden ya existe: Mostrar advertencia y botón de examinar manteniendo el número
         setOrdenExistenteInfo(data);
+        return false;
       } else {
         // Orden disponible: avanzar a captura de cantidades
         setOrdenExistenteInfo(null);
         setCurrentStep(2);
+        return true;
       }
     } catch (err) {
       setOrdenError(err.message || "Error al consultar la existencia de la orden.");
+      return false;
     } finally {
       setIsCheckingOrden(false);
     }
@@ -245,10 +247,49 @@ export default function NuevoRegistroWizard() {
 
     if (pesadasValidas.length === 0) {
       alert("Debes capturar al menos 1 pesada válida (Peso bruto mayor a la tara) para continuar.");
-      return;
+      return false;
     }
 
     setCurrentStep(3);
+    return true;
+  }
+
+  // Navegación interactiva por los pasos superiores con validaciones
+  async function handleStepClick(targetStep) {
+    if (targetStep === currentStep || isCheckingOrden) return;
+
+    if (targetStep === 1) {
+      // Regresar al paso 1 siempre está permitido
+      setCurrentStep(1);
+      return;
+    }
+
+    if (targetStep === 2) {
+      if (currentStep === 1) {
+        // Si está en el paso 1, ejecutar validación de orden existente
+        const ok = await handleVerificarOrdenYContinuar();
+        if (!ok) return;
+      } else {
+        setCurrentStep(2);
+      }
+      return;
+    }
+
+    if (targetStep === 3) {
+      if (currentStep === 1) {
+        // Primero validar orden del paso 1
+        const ok = await handleVerificarOrdenYContinuar();
+        if (!ok) return;
+        // Luego validar que haya pesadas capturadas
+        const canGoTo3 = handleContinuarADatos();
+        if (!canGoTo3) {
+          // Si no hay pesadas, se queda en el paso 2
+          return;
+        }
+      } else if (currentStep === 2) {
+        handleContinuarADatos();
+      }
+    }
   }
 
   // PASO 3: Guardar Registro Atómicamente
@@ -466,7 +507,7 @@ export default function NuevoRegistroWizard() {
         <div className="flex items-center justify-between max-w-2xl mx-auto">
           {/* Paso 1 */}
           <div
-            onClick={() => setCurrentStep(1)}
+            onClick={() => handleStepClick(1)}
             className={`flex items-center gap-2 cursor-pointer transition ${
               currentStep === 1
                 ? "text-blue-600 font-bold"
@@ -493,15 +534,13 @@ export default function NuevoRegistroWizard() {
 
           {/* Paso 2 */}
           <div
-            onClick={() => values.ordenGranel && setCurrentStep(2)}
-            className={`flex items-center gap-2 ${
-              values.ordenGranel ? "cursor-pointer" : "cursor-not-allowed opacity-60"
-            } transition ${
+            onClick={() => handleStepClick(2)}
+            className={`flex items-center gap-2 cursor-pointer transition ${
               currentStep === 2
                 ? "text-blue-600 font-bold"
                 : currentStep > 2
                 ? "text-emerald-600 font-medium"
-                : "text-slate-400"
+                : "text-slate-400 hover:text-slate-600"
             }`}
           >
             <span
@@ -513,7 +552,7 @@ export default function NuevoRegistroWizard() {
                   : "bg-slate-200 text-slate-600"
               }`}
             >
-              {currentStep > 2 ? "✓" : "2"}
+              {isCheckingOrden && currentStep === 1 ? "..." : currentStep > 2 ? "✓" : "2"}
             </span>
             <span className="text-xs hidden sm:inline">Captura de Cantidades</span>
           </div>
@@ -522,13 +561,11 @@ export default function NuevoRegistroWizard() {
 
           {/* Paso 3 */}
           <div
-            onClick={() => values.ordenGranel && setCurrentStep(3)}
-            className={`flex items-center gap-2 ${
-              values.ordenGranel ? "cursor-pointer" : "cursor-not-allowed opacity-60"
-            } transition ${
+            onClick={() => handleStepClick(3)}
+            className={`flex items-center gap-2 cursor-pointer transition ${
               currentStep === 3
                 ? "text-blue-600 font-bold"
-                : "text-slate-400"
+                : "text-slate-400 hover:text-slate-600"
             }`}
           >
             <span

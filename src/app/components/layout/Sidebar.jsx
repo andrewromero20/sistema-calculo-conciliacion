@@ -29,10 +29,12 @@ export default function Sidebar({ activeView }) {
         if (raw) {
           const parsed = JSON.parse(raw);
           const hasContent = Boolean(
-            parsed.ordenGranel ||
-              parsed.lote ||
-              parsed.producto ||
-              (parsed.pesos && parsed.pesos.some((p) => Number(p.pesoBruto) > 0))
+            parsed &&
+              Number(parsed.currentStep) >= 2 &&
+              (parsed.ordenGranel ||
+                parsed.lote ||
+                parsed.producto ||
+                (parsed.pesos && parsed.pesos.some((p) => Number(p.pesoBruto) > 0)))
           );
           setHasDraft(hasContent);
           return;

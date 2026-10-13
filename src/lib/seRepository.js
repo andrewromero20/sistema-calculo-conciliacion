@@ -6,6 +6,27 @@ import path from "path";
 const DATA_DIR = path.join(process.cwd(), "data");
 const FALLBACK_FILE = path.join(DATA_DIR, "se-storage.json");
 
+let isPrismaOffline = false;
+let lastPrismaCheck = 0;
+const PRISMA_OFFLINE_COOLDOWN = 60000;
+
+function isPrismaAvailable() {
+  if (isPrismaOffline && Date.now() - lastPrismaCheck < PRISMA_OFFLINE_COOLDOWN) {
+    return false;
+  }
+  return true;
+}
+
+function markPrismaOffline(err) {
+  isPrismaOffline = true;
+  lastPrismaCheck = Date.now();
+  console.warn("Prisma/PostgreSQL no disponible (usando fallback local JSON):", err?.message || err);
+}
+
+function markPrismaOnline() {
+  isPrismaOffline = false;
+}
+
 function ensureFallbackFile() {
   try {
     if (!fs.existsSync(DATA_DIR)) {
@@ -142,6 +163,11 @@ export function calcularDiffSE(viejo, nuevo) {
 }
 
 export async function obtenerTodosRegistrosSE() {
+  if (!isPrismaAvailable()) {
+    const fb = readFallback();
+    return fb.registros || [];
+  }
+
   try {
     const list = await prisma.registroSE.findMany({
       include: {
@@ -154,9 +180,10 @@ export async function obtenerTodosRegistrosSE() {
       },
       orderBy: { fechaCreacion: "desc" },
     });
+    markPrismaOnline();
     return list;
   } catch (err) {
-    console.warn("Prisma no disponible para obtenerTodosRegistrosSE, usando fallback:", err.message);
+    markPrismaOffline(err);
     const fb = readFallback();
     return fb.registros || [];
   }
@@ -164,21 +191,26 @@ export async function obtenerTodosRegistrosSE() {
 
 export async function obtenerRegistroSEPorOrden(ordenGranel) {
   const og = String(ordenGranel || "").trim();
-  try {
-    const registro = await prisma.registroSE.findUnique({
-      where: { ordenGranel: og },
-      include: {
-        pesos: { orderBy: { id: "asc" } },
-        auditorias: {
-          orderBy: { fechaModificacion: "desc" },
-          include: { usuario: { select: { id: true, nombre: true, email: true, rol: true } } },
+  if (isPrismaAvailable()) {
+    try {
+      const registro = await prisma.registroSE.findUnique({
+        where: { ordenGranel: og },
+        include: {
+          pesos: { orderBy: { id: "asc" } },
+          auditorias: {
+            orderBy: { fechaModificacion: "desc" },
+            include: { usuario: { select: { id: true, nombre: true, email: true, rol: true } } },
+          },
+          creadoPor: { select: { id: true, nombre: true, email: true } },
         },
-        creadoPor: { select: { id: true, nombre: true, email: true } },
-      },
-    });
-    if (registro) return registro;
-  } catch (err) {
-    console.warn("Prisma no disponible para findUnique, usando fallback:", err.message);
+      });
+      if (registro) {
+        markPrismaOnline();
+        return registro;
+      }
+    } catch (err) {
+      markPrismaOffline(err);
+    }
   }
 
   const fb = readFallback();
@@ -277,7 +309,7 @@ export async function crearRegistroSE(datos, usuarioId) {
       throw err;
     }
 
-    console.warn("Transacción Prisma no disponible, ejecutando transacción atómica fallback:", err.message);
+    markPrismaOffline(err);
     const fb = readFallback();
     if (fb.registros.some((r) => r.ordenGranel === ordenGranel)) {
       throw new Error(`La Orden a Granel ${ordenGranel} ya se encuentra registrada.`);
@@ -403,7 +435,7 @@ export async function actualizarRegistroSE(ordenGranel, datosNuevos, usuarioId, 
 
     return { registro: resultado, diff };
   } catch (err) {
-    console.warn("Transacción de actualización en Prisma no disponible, usando fallback:", err.message);
+    markPrismaOffline(err);
     const fb = readFallback();
     const idx = fb.registros.findIndex((r) => r.ordenGranel === ordenGranel);
     if (idx === -1) {

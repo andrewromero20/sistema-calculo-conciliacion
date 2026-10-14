@@ -77,7 +77,10 @@ export default function SeHistorialPage() {
         {/* Barra de Búsqueda sin filtros avanzados */}
         <div className="bg-white p-5 rounded-xl border border-slate-200 shadow-xs">
           <div className="flex flex-wrap items-center justify-between gap-3">
-            <div className="flex-1 min-w-[260px] max-w-md relative">
+            <div className="flex-1 min-w-[260px] max-w-md flex items-center bg-white border border-slate-300 rounded-lg px-3 py-2 focus-within:ring-2 focus-within:ring-blue-500 focus-within:border-blue-500 transition shadow-2xs">
+              <span className="text-slate-400 shrink-0 mr-2.5 flex items-center justify-center pointer-events-none">
+                <Icon name="search" size={15} />
+              </span>
               <input
                 type="text"
                 value={searchTerm}
@@ -86,16 +89,14 @@ export default function SeHistorialPage() {
                   setCurrentPage(1);
                 }}
                 placeholder="Buscar por número de orden o lote..."
-                className="w-full pl-9 pr-8 py-2 text-xs border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 font-medium"
+                className="w-full text-xs font-medium focus:outline-none bg-transparent text-slate-800 placeholder-slate-400 border-none p-0"
               />
-              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400">
-                <Icon name="search" size={15} />
-              </span>
               {searchTerm && (
                 <button
                   type="button"
                   onClick={limpiarFiltros}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 text-xs"
+                  className="text-slate-400 hover:text-slate-600 text-xs shrink-0 ml-2 transition"
+                  title="Limpiar búsqueda"
                 >
                   ✕
                 </button>

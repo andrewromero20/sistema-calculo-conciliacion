@@ -13,6 +13,7 @@ export default function AutocompleteInput({
   required = false,
   error = "",
   id,
+  isUnmodified = false,
 }) {
   const [isOpen, setIsOpen] = useState(false);
   const containerRef = useRef(null);
@@ -68,6 +69,8 @@ export default function AutocompleteInput({
               ? "bg-slate-100 text-slate-600 border-slate-200 cursor-not-allowed"
               : error
               ? "border-red-400 bg-red-50/30 text-slate-900"
+              : isUnmodified
+              ? "border-blue-500 ring-2 ring-blue-400 bg-blue-50/15 shadow-[0_0_8px_rgba(59,130,246,0.35)]"
               : "border-slate-300 bg-white text-slate-900 hover:border-slate-400"
           }`}
         />

@@ -23,13 +23,13 @@ export default function CapturaCantidades({
 }) {
   const [currentPage, setCurrentPage] = useState(1);
 
-  // Asegurar que existan exactamente 48 filas para la captura o mapeo uniforme (tara por default en 0)
+  // Asegurar que existan exactamente 48 filas para la captura o mapeo uniforme (tara vacía por default para exigir captura manual, visualmente placeholder 0)
   const fullPesos = useMemo(() => {
     const list = [...pesos];
     while (list.length < TOTAL_ROWS) {
       list.push({
         pesoBruto: "",
-        pesoTara: "0",
+        pesoTara: "",
         pesoNeto: 0,
       });
     }
@@ -53,15 +53,26 @@ export default function CapturaCantidades({
     return fullPesos.filter((p) => Number(p.pesoBruto) > 0).length;
   }, [fullPesos]);
 
-  // Actualizar una celda
+  // Actualizar una celda con validación contra negativos y tara mayor a bruto (Puntos 2 y 8)
   function handleCellChange(index, field, rawValue) {
     if (readOnly || !onChangePesos) return;
 
-    // Permitir solo números y un único punto decimal con hasta 2 decimales
     let val = rawValue;
+
+    // 2. En ningún campo numérico se permiten cantidades negativas
+    if (val.includes("-")) return;
+
+    // Permitir solo números y un único punto decimal con hasta 2 decimales
     if (val !== "") {
-      // Regex para validar formato parcial de número decimal con máx 2 decimales
       if (!/^\d*(\.\d{0,2})?$/.test(val)) {
+        return;
+      }
+    }
+
+    // 8. El peso tara no puede ser mayor al peso bruto
+    if (field === "pesoTara" && val !== "") {
+      const brutoVal = Number(fullPesos[index].pesoBruto) || 0;
+      if (brutoVal > 0 && Number(val) > brutoVal) {
         return;
       }
     }
@@ -70,8 +81,15 @@ export default function CapturaCantidades({
       if (i !== index) return item;
       const newItem = { ...item, [field]: val };
       const bruto = Number(field === "pesoBruto" ? val : item.pesoBruto) || 0;
-      const tara = Number(field === "pesoTara" ? val : item.pesoTara) || 0;
-      newItem.pesoNeto = bruto >= tara ? Number((bruto - tara).toFixed(2)) : 0;
+      const taraStr = field === "pesoTara" ? val : item.pesoTara;
+      const tara = Number(taraStr) || 0;
+
+      // Calcular peso neto si hay peso bruto y peso tara
+      if (bruto > 0 && taraStr !== "") {
+        newItem.pesoNeto = bruto >= tara ? Number((bruto - tara).toFixed(2)) : 0;
+      } else {
+        newItem.pesoNeto = 0;
+      }
       return newItem;
     });
 
@@ -84,9 +102,10 @@ export default function CapturaCantidades({
     if (!value || String(value).trim() === "") return;
 
     const trimmed = String(value).trim();
+    if (trimmed.includes("-")) return;
+
     const num = Number(trimmed);
-    if (!isNaN(num) && num > 0) {
-      // Si no tiene punto decimal, formatear agregando .0
+    if (!isNaN(num) && num >= 0) {
       let formatted = trimmed;
       if (!trimmed.includes(".")) {
         formatted = `${trimmed}.0`;
@@ -94,12 +113,22 @@ export default function CapturaCantidades({
         formatted = `${trimmed}0`;
       }
 
+      // Validar punto 8: tara no mayor a bruto
+      const bruto = Number(field === "pesoBruto" ? formatted : fullPesos[index].pesoBruto) || 0;
+      let taraStr = field === "pesoTara" ? formatted : fullPesos[index].pesoTara;
+      if (field === "pesoTara" && bruto > 0 && Number(taraStr) > bruto) {
+        formatted = "";
+        taraStr = "";
+      }
+
       const updated = fullPesos.map((item, i) => {
         if (i !== index) return item;
         const newItem = { ...item, [field]: formatted };
-        const bruto = Number(field === "pesoBruto" ? formatted : item.pesoBruto) || 0;
-        const tara = Number(field === "pesoTara" ? formatted : item.pesoTara) || 0;
-        newItem.pesoNeto = bruto >= tara ? Number((bruto - tara).toFixed(2)) : 0;
+        const tara = Number(taraStr) || 0;
+        newItem.pesoNeto =
+          bruto > 0 && taraStr !== "" && bruto >= tara
+            ? Number((bruto - tara).toFixed(2))
+            : 0;
         return newItem;
       });
 
@@ -107,39 +136,69 @@ export default function CapturaCantidades({
     }
   }
 
-  // Manejo de Enter: de pesoBruto -> pesoTara de la misma fila, de pesoTara -> pesoBruto de la siguiente fila
+  // Enfocar celda objetivo navegando entre páginas si es necesario
+  function focusCell(targetIndex, targetField) {
+    if (targetIndex < 0 || targetIndex >= TOTAL_ROWS) return;
+    const targetPage = Math.floor(targetIndex / PAGE_SIZE) + 1;
+    const elId = targetField === "pesoBruto" ? `input-bruto-${targetIndex}` : `input-tara-${targetIndex}`;
+
+    if (targetPage !== currentPage) {
+      setCurrentPage(targetPage);
+      setTimeout(() => {
+        const el = document.getElementById(elId);
+        if (el && !el.disabled) {
+          el.focus();
+          el.select?.();
+        }
+      }, 50);
+    } else {
+      const el = document.getElementById(elId);
+      if (el && !el.disabled) {
+        el.focus();
+        el.select?.();
+      }
+    }
+  }
+
+  // Manejo de teclado: Enter y Flechas para avanzar y retroceder (Puntos 2 y 6)
   function handleKeyDown(e, globalIndex, field) {
+    // 2. Prevenir negativos y exponenciales
+    if (e.key === "-" || e.key === "e" || e.key === "E") {
+      e.preventDefault();
+      return;
+    }
+
+    // 6. Navegación con Enter y Flechas del teclado
     if (e.key === "Enter") {
       e.preventDefault();
       if (field === "pesoBruto") {
-        // Al dar Enter en peso bruto, mandar a la casilla de peso tara de la misma fila
-        const taraEl = document.getElementById(`input-tara-${globalIndex}`);
-        if (taraEl && !taraEl.disabled) {
-          taraEl.focus();
-          taraEl.select?.();
-        }
+        focusCell(globalIndex, "pesoTara");
       } else if (field === "pesoTara") {
-        // Al dar Enter en peso tara, mandar a peso bruto de la siguiente fila
-        const nextIndex = globalIndex + 1;
-        if (nextIndex < TOTAL_ROWS) {
-          const targetPage = Math.floor(nextIndex / PAGE_SIZE) + 1;
-          if (targetPage !== currentPage) {
-            setCurrentPage(targetPage);
-            setTimeout(() => {
-              const nextEl = document.getElementById(`input-bruto-${nextIndex}`);
-              if (nextEl && !nextEl.disabled) {
-                nextEl.focus();
-                nextEl.select?.();
-              }
-            }, 60);
-          } else {
-            const nextEl = document.getElementById(`input-bruto-${nextIndex}`);
-            if (nextEl && !nextEl.disabled) {
-              nextEl.focus();
-              nextEl.select?.();
-            }
-          }
-        }
+        focusCell(globalIndex + 1, "pesoBruto");
+      }
+    } else if (e.key === "ArrowRight") {
+      if (field === "pesoBruto") {
+        e.preventDefault();
+        focusCell(globalIndex, "pesoTara");
+      } else if (field === "pesoTara") {
+        e.preventDefault();
+        focusCell(globalIndex + 1, "pesoBruto");
+      }
+    } else if (e.key === "ArrowLeft") {
+      if (field === "pesoTara") {
+        e.preventDefault();
+        focusCell(globalIndex, "pesoBruto");
+      } else if (field === "pesoBruto" && globalIndex > 0) {
+        e.preventDefault();
+        focusCell(globalIndex - 1, "pesoTara");
+      }
+    } else if (e.key === "ArrowDown") {
+      e.preventDefault();
+      focusCell(globalIndex + 1, field);
+    } else if (e.key === "ArrowUp") {
+      if (globalIndex > 0) {
+        e.preventDefault();
+        focusCell(globalIndex - 1, field);
       }
     }
   }
@@ -154,7 +213,7 @@ export default function CapturaCantidades({
 
     const reset = Array.from({ length: TOTAL_ROWS }, () => ({
       pesoBruto: "",
-      pesoTara: "0",
+      pesoTara: "",
       pesoNeto: 0,
     }));
     onChangePesos(reset);
@@ -218,7 +277,10 @@ export default function CapturaCantidades({
                 const globalIndex = startIndex + idx;
                 const hasValue = Number(item.pesoBruto) > 0;
                 const invalidRow =
-                  hasValue && Number(item.pesoTara) > Number(item.pesoBruto);
+                  hasValue &&
+                  item.pesoTara !== "" &&
+                  (Number(item.pesoTara) > Number(item.pesoBruto) ||
+                    Number(item.pesoTara) < 0);
 
                 // Enforzar orden secuencial (Paso 1 luego 2 luego 3...)
                 const isRowEnabled =
@@ -251,6 +313,7 @@ export default function CapturaCantidades({
                           id={`input-bruto-${globalIndex}`}
                           type="text"
                           inputMode="decimal"
+                          min="0"
                           disabled={!isRowEnabled}
                           value={item.pesoBruto}
                           onChange={(e) =>
@@ -270,7 +333,7 @@ export default function CapturaCantidades({
                             !isRowEnabled
                               ? "border-slate-200 bg-slate-100 text-slate-400 cursor-not-allowed select-none"
                               : invalidRow
-                              ? "border-red-400 bg-red-50"
+                              ? "border-red-400 bg-red-50 text-red-900"
                               : "border-slate-300 bg-white"
                           }`}
                         />
@@ -287,6 +350,7 @@ export default function CapturaCantidades({
                           id={`input-tara-${globalIndex}`}
                           type="text"
                           inputMode="decimal"
+                          min="0"
                           disabled={!isTaraEnabled}
                           value={item.pesoTara}
                           onChange={(e) =>
@@ -300,11 +364,15 @@ export default function CapturaCantidades({
                           title={
                             !isTaraEnabled
                               ? "Ingresa primero el peso bruto correspondiente"
+                              : invalidRow
+                              ? "El peso tara no puede superar al peso bruto"
                               : ""
                           }
                           className={`w-full max-w-[180px] px-3 py-1.5 border rounded font-mono text-xs focus:outline-none focus:ring-2 focus:ring-blue-500 transition ${
                             !isTaraEnabled
                               ? "border-slate-200 bg-slate-100 text-slate-400 cursor-not-allowed select-none"
+                              : invalidRow
+                              ? "border-red-400 bg-red-50 text-red-900"
                               : "border-slate-300 bg-white"
                           }`}
                         />

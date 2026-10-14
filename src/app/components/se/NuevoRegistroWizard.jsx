@@ -33,7 +33,7 @@ const INITIAL_STATE = {
   fechaFinRecubrimiento: "",
   pesos: Array.from({ length: 48 }, () => ({
     pesoBruto: "",
-    pesoTara: "0",
+    pesoTara: "",
     pesoNeto: 0,
   })),
 };
@@ -55,6 +55,7 @@ export default function NuevoRegistroWizard() {
 
   // Modo plantilla y post-guardado
   const [templateMode, setTemplateMode] = useState(false);
+  const [templateBaseline, setTemplateBaseline] = useState(null); // Valores base precargados de la plantilla para comparar cambios
   const [ultimoRegistroGuardado, setUltimoRegistroGuardado] = useState(null);
   const [hasDraftNotice, setHasDraftNotice] = useState(false);
   const [successBanner, setSuccessBanner] = useState(null);
@@ -83,7 +84,7 @@ export default function NuevoRegistroWizard() {
       .catch((err) => console.error("Error al obtener último registro:", err));
   }, []);
 
-  // Cálculo automático y en tiempo real de Cant. SAP, Acondicionar y Rendimiento (Items 9, 10, 11, 12)
+  // Cálculo automático y en tiempo real de Cant. SAP, Acondicionar y Rendimiento (Items 9, 10, 11)
   useEffect(() => {
     const pesoNeto = Number(values.pesoNetoTotalTabletas) || 0;
     const pesoProm = Number(values.pesoPromedio) || 0;
@@ -95,21 +96,27 @@ export default function NuevoRegistroWizard() {
     let rend = "";
 
     if (pesoNeto > 0 && pesoProm > 0) {
-      // 9. CANT. PZAS A CARGAR EN SAP = PESO NETO TOTAL (kg * 1000) / PESO PROMEDIO (g)
-      const piezas = Math.round((pesoNeto * 1000) / pesoProm);
+      // 9. CANT. PZAS A CARGAR EN SAP = Math.floor((PESO NETO TOTAL * 1000) / PESO PROMEDIO)
+      // Se redondea hacia abajo a entero, sin decimales
+      const piezas = Math.floor((pesoNeto * 1000) / pesoProm);
       cantSap = piezas;
 
-      // 10. CANT. PZAS A ACONDICIONAR = CANT. PZAS A CARGAR EN SAP / CANT DE TAB. POR PZA
+      // 10. CANT. PZAS A ACONDICIONAR = Math.floor(CANT. PZAS A CARGAR EN SAP / CANT DE TAB. POR PZA)
+      // Se redondea hacia abajo a entero, sin decimales
       if (cantTabPorPza > 0) {
-        cantAcond = Math.round(piezas / cantTabPorPza);
+        cantAcond = Math.floor(piezas / cantTabPorPza);
       }
 
-      // 11. RENDIMIENTO TAB = ((PESO NETO TOTAL / PESO PROMEDIO) / TAMAÑO DEL LOTE ESTANDAR)
+      // 11 y 10. RENDIMIENTO TAB = ((PESO NETO TOTAL / PESO PROMEDIO) / TAMAÑO DEL LOTE ESTANDAR)
+      // Formato como porcentaje realista (ej. 92.5%, nunca 92456.3%)
       if (tamanoLote > 0) {
-        const r =
+        let r =
           tamanoLote > 1000
             ? (piezas / tamanoLote) * 100
             : (pesoNeto / tamanoLote) * 100;
+        while (r > 500) {
+          r = r / 1000;
+        }
         rend = Number(r.toFixed(1));
       }
     }
@@ -136,12 +143,47 @@ export default function NuevoRegistroWizard() {
     values.tamanoLoteEstandar,
   ]);
 
+  // Helper para verificar si un campo no ha cambiado respecto a la plantilla base (Punto 5)
+  const isUnmodifiedField = useCallback(
+    (field) => {
+      if (!templateMode || !templateBaseline) return false;
+      const currentVal = values[field];
+      const baseVal = templateBaseline[field];
+      if (currentVal === undefined || currentVal === null || String(currentVal).trim() === "") {
+        return false;
+      }
+      return String(currentVal).trim() === String(baseVal ?? "").trim();
+    },
+    [templateMode, templateBaseline, values]
+  );
+
+  // Cancelar Modo Edición de Plantilla y borrar por completo el registro (Punto 4)
+  function handleCancelarPlantilla() {
+    setTemplateMode(false);
+    setTemplateBaseline(null);
+    setValues(INITIAL_STATE);
+    setCurrentStep(1);
+    setOrdenExistenteInfo(null);
+    setOrdenError("");
+    try {
+      localStorage.removeItem(DRAFT_STORAGE_KEY);
+      sessionStorage.removeItem(DRAFT_STORAGE_KEY);
+      sessionStorage.removeItem(DRAFT_SESSION_KEY);
+    } catch (e) {
+      console.error(e);
+    }
+    notifyDraftUpdate();
+  }
+
   function handleRellenarConUltimoRegistro() {
     if (!ultimoRegistroGuardado) return;
-    const prev = ultimoRegistroGuardado;
+    const prev = { ...ultimoRegistroGuardado };
     setTemplateMode(true);
+    setTemplateBaseline(prev);
     setValues((curr) => ({
       ...curr,
+      ordenGranel: prev.ordenGranel || "",
+      lote: prev.lote || "",
       codigoMaterial: prev.codigoMaterial || "",
       producto: prev.producto || "",
       tamanoLoteEstandar: prev.tamanoLoteEstandar || "",
@@ -170,7 +212,7 @@ export default function NuevoRegistroWizard() {
         prev.pesos && prev.pesos.length > 0
           ? Array.from({ length: 48 }, (_, i) => ({
               pesoBruto: prev.pesos[i]?.pesoBruto ? String(prev.pesos[i].pesoBruto) : "",
-              pesoTara: prev.pesos[i]?.pesoTara !== undefined ? String(prev.pesos[i].pesoTara) : "0",
+              pesoTara: prev.pesos[i]?.pesoTara !== undefined && prev.pesos[i]?.pesoTara !== null ? String(prev.pesos[i].pesoTara) : "",
               pesoNeto: Number(prev.pesos[i]?.pesoNeto) || 0,
             }))
           : curr.pesos,
@@ -203,6 +245,8 @@ export default function NuevoRegistroWizard() {
         // El usuario está navegando entre menús dentro de la aplicación:
         // Restaurar automáticamente sin mostrar aviso
         setValues((prev) => ({ ...prev, ...parsed }));
+        if (parsed.templateMode) setTemplateMode(Boolean(parsed.templateMode));
+        if (parsed.templateBaseline) setTemplateBaseline(parsed.templateBaseline);
         if (parsed.currentStep && parsed.currentStep >= 1 && parsed.currentStep <= 3) {
           setCurrentStep(parsed.currentStep);
         } else if (parsed.ordenGranel && Number(parsed.currentStep) >= 2) {
@@ -230,13 +274,18 @@ export default function NuevoRegistroWizard() {
       values.pesos.some((p) => Number(p.pesoBruto) > 0);
 
     if (hasData) {
-      const serialized = JSON.stringify({ ...values, currentStep });
+      const serialized = JSON.stringify({
+        ...values,
+        currentStep,
+        templateMode,
+        templateBaseline,
+      });
       localStorage.setItem(DRAFT_STORAGE_KEY, serialized);
       sessionStorage.setItem(DRAFT_STORAGE_KEY, serialized);
       sessionStorage.setItem(DRAFT_SESSION_KEY, "true");
       notifyDraftUpdate();
     }
-  }, [values, currentStep, hasDraftNotice, notifyDraftUpdate]);
+  }, [values, currentStep, hasDraftNotice, notifyDraftUpdate, templateMode, templateBaseline]);
 
   // Protección beforeunload
   useEffect(() => {
@@ -264,6 +313,8 @@ export default function NuevoRegistroWizard() {
       if (raw) {
         const parsed = JSON.parse(raw);
         setValues((prev) => ({ ...prev, ...parsed }));
+        if (parsed.templateMode) setTemplateMode(Boolean(parsed.templateMode));
+        if (parsed.templateBaseline) setTemplateBaseline(parsed.templateBaseline);
         if (parsed.currentStep && parsed.currentStep >= 1 && parsed.currentStep <= 3) {
           setCurrentStep(parsed.currentStep);
         } else if (parsed.ordenGranel) {
@@ -287,6 +338,8 @@ export default function NuevoRegistroWizard() {
       console.error(e);
     }
     setHasDraftNotice(false);
+    setTemplateMode(false);
+    setTemplateBaseline(null);
     setValues(INITIAL_STATE);
     setCurrentStep(1);
     setOrdenExistenteInfo(null);
@@ -350,15 +403,37 @@ export default function NuevoRegistroWizard() {
     }
   }
 
-  // PASO 2 -> PASO 3: Validar que haya al menos 1 pesada válida
+  // PASO 2 -> PASO 3: Validar que haya al menos 1 pesada válida, tara ingresada manualmente y no mayor a bruto (Items 7 y 8)
   function handleContinuarADatos() {
-    const pesadasValidas = values.pesos.filter(
-      (p) => Number(p.pesoBruto) > 0 && Number(p.pesoBruto) >= Number(p.pesoTara)
-    );
+    const pesadasConBruto = values.pesos
+      .map((p, idx) => ({ ...p, originalIndex: idx + 1 }))
+      .filter((p) => p.pesoBruto !== "" && !isNaN(Number(p.pesoBruto)) && Number(p.pesoBruto) > 0);
 
-    if (pesadasValidas.length === 0) {
-      alert("Debes capturar al menos 1 pesada válida (Peso bruto mayor a la tara) para continuar.");
+    if (pesadasConBruto.length === 0) {
+      alert("Debes capturar al menos 1 pesada válida (con Peso Bruto mayor a 0) para continuar.");
       return false;
+    }
+
+    // Punto 7 y 8: No dejar continuar si un peso bruto no tiene registrado su peso tara manualmente o si tara > bruto o < 0
+    for (const p of pesadasConBruto) {
+      if (p.pesoTara === "" || p.pesoTara === null || p.pesoTara === undefined) {
+        alert(
+          `La pesada #${p.originalIndex} tiene un peso bruto capturado (${p.pesoBruto} kg) pero no tiene peso tara registrado.\n\nDebes ingresar manualmente la tara en esa casilla (ingresa 0 si no aplica tara).`
+        );
+        return false;
+      }
+      const numTara = Number(p.pesoTara);
+      const numBruto = Number(p.pesoBruto);
+      if (isNaN(numTara) || numTara < 0) {
+        alert(`La pesada #${p.originalIndex} tiene un valor de tara inválido o negativo.`);
+        return false;
+      }
+      if (numTara > numBruto) {
+        alert(
+          `La pesada #${p.originalIndex} tiene un peso tara (${numTara} kg) mayor a su peso bruto (${numBruto} kg).\n\nEl peso tara no puede ser mayor al peso bruto.`
+        );
+        return false;
+      }
     }
 
     setCurrentStep(3);
@@ -509,11 +584,12 @@ export default function NuevoRegistroWizard() {
     const prev = successBanner.record;
     setSuccessBanner(null);
     setTemplateMode(true);
+    setTemplateBaseline({ ...prev });
 
-    // Conservar datos generales previos pero limpiar orden, lote, pesadas y rendimiento
+    // Conservar datos generales previos incluyendo orden y lote como plantilla base (Punto 5)
     setValues({
-      ordenGranel: "",
-      lote: "",
+      ordenGranel: prev.ordenGranel || "",
+      lote: prev.lote || "",
       codigoMaterial: prev.codigoMaterial || "",
       producto: prev.producto || "",
       tamanoLoteEstandar: prev.tamanoLoteEstandar || "",
@@ -544,7 +620,7 @@ export default function NuevoRegistroWizard() {
         : "",
       pesos: Array.from({ length: 48 }, () => ({
         pesoBruto: "",
-        pesoTara: "0",
+        pesoTara: "",
         pesoNeto: 0,
       })),
     });
@@ -594,21 +670,42 @@ export default function NuevoRegistroWizard() {
         </div>
       )}
 
-      {/* Banner de Modo Plantilla (Figma Comment 6) */}
+      {/* Banner de Modo Plantilla (Items 4 y 5) */}
       {templateMode && (
-        <div className="p-4 rounded-xl bg-amber-50 border-2 border-amber-400 text-amber-900 flex items-start gap-3 shadow-xs animate-in fade-in">
-          <span className="w-8 h-8 rounded-full bg-amber-200 text-amber-800 font-bold flex items-center justify-center flex-shrink-0 text-sm">
-            ★
-          </span>
-          <div className="text-xs">
-            <p className="font-bold text-sm text-amber-900">
-              Modo Edición de Plantilla Activo
-            </p>
-            <p className="mt-0.5 text-amber-800">
-              Se han precargado los parámetros del lote previo. Ingresa el nuevo{" "}
-              <strong>Número de Orden</strong> y <strong>Lote</strong>, y captura
-              las nuevas cantidades de tableteado.
-            </p>
+        <div className="p-4 sm:p-5 rounded-2xl bg-blue-50/95 border-2 border-blue-400 text-blue-950 flex flex-wrap items-start justify-between gap-4 shadow-sm animate-in fade-in">
+          <div className="flex items-start gap-3.5 max-w-2xl">
+            <span className="w-9 h-9 rounded-xl bg-blue-600 text-white font-black flex items-center justify-center shrink-0 text-sm shadow-xs">
+              ★
+            </span>
+            <div className="text-xs space-y-1.5">
+              <div className="flex flex-wrap items-center gap-2">
+                <p className="font-bold text-sm text-blue-950">
+                  Modo Edición de Plantilla Activo
+                </p>
+                <span className="px-2 py-0.5 rounded-full bg-blue-200/80 text-blue-900 font-bold text-[10px] tracking-wide">
+                  Marco azul iluminado = Campo no modificado
+                </span>
+              </div>
+              <p className="text-blue-900 leading-relaxed">
+                Se han precargado los datos del registro anterior para agilizar la captura. Recuerda cambiar los datos necesarios como <strong>Número de Orden</strong> y <strong>Lote</strong>, así como los datos técnicos que varíen.
+              </p>
+              <div className="flex items-start gap-2 pt-1 text-[11px] text-blue-800">
+                <span className="inline-block w-3 h-3 rounded-xs border-2 border-blue-500 bg-blue-200 shrink-0 shadow-[0_0_6px_rgba(59,130,246,0.6)] mt-0.5" />
+                <span>
+                  <strong>Indicación para el usuario:</strong> Las casillas que muestran un marco azul iluminado no han cambiado respecto al registro anterior. Por favor revisa cada campo antes de confirmar.
+                </span>
+              </div>
+            </div>
+          </div>
+          <div className="flex items-center gap-2 self-center sm:self-start">
+            <button
+              type="button"
+              onClick={handleCancelarPlantilla}
+              className="py-2 px-3.5 rounded-lg border border-red-300 bg-white hover:bg-red-50 text-red-700 hover:text-red-800 text-xs font-bold transition shadow-2xs flex items-center gap-1.5"
+            >
+              <Icon name="trash" size={14} />
+              <span>Cancelar plantilla (Borrar todo)</span>
+            </button>
           </div>
         </div>
       )}
@@ -760,8 +857,18 @@ export default function NuevoRegistroWizard() {
                   setOrdenExistenteInfo(null);
                   setOrdenError("");
                 }}
-                className="w-full px-4 py-3 text-sm font-mono font-bold border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className={`w-full px-4 py-3 text-sm font-mono font-bold rounded-lg focus:outline-none transition-all ${
+                  isUnmodifiedField("ordenGranel")
+                    ? "border-2 border-blue-500 ring-2 ring-blue-400 bg-blue-50/20 shadow-[0_0_10px_rgba(59,130,246,0.45)] text-slate-900"
+                    : "border border-slate-300 focus:ring-2 focus:ring-blue-500 text-slate-900"
+                }`}
               />
+              {isUnmodifiedField("ordenGranel") && (
+                <p className="mt-1.5 text-xs text-blue-700 font-semibold flex items-center gap-1.5 animate-in fade-in">
+                  <span className="inline-block w-2 h-2 rounded-full bg-blue-500 animate-pulse" />
+                  <span>Campo idéntico al registro anterior. Modifícalo si este lote corresponde a una nueva orden.</span>
+                </p>
+              )}
               {ordenError && (
                 <p className="mt-1.5 text-xs text-red-600 font-medium">
                   {ordenError}
@@ -913,6 +1020,7 @@ export default function NuevoRegistroWizard() {
             onChangeField={handleChangeField}
             errors={formErrors}
             readOnly={false}
+            isUnmodifiedField={isUnmodifiedField}
           />
 
           <div className="flex justify-between items-center pt-2">

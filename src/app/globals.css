@@ -389,6 +389,43 @@ label { display: block; font-weight: 600; margin-bottom: 8px; }input, select { w
   font-size: 10px;
   text-align: right;
 }
+.matrix-input-group {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.matrix-input-label {
+  color: #475467;
+  font-size: 10px;
+  font-weight: 700;
+  line-height: 1.25;
+  text-align: left;
+  white-space: normal;
+}
+
+.matrix-inline-result {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-top: 3px;
+  padding: 7px 8px;
+  border-radius: 5px;
+  background: #f3f6fa;
+  color: #344054;
+}
+
+.matrix-inline-result small {
+  color: var(--muted);
+  font-size: 9px;
+}
+
+.matrix-inline-result strong {
+  font-size: 11px;
+  white-space: nowrap;
+}
 
 }
 

@@ -16,6 +16,9 @@
     calcularESelloGarantia,
     calcularFSelloGarantia,
     calcularGSelloGarantia,
+    calcularECajaPlegadiza,
+    calcularFCajaPlegadiza,
+    calcularGCajaPlegadiza,
 } from "../../../lib/calculosMateriales";
 
 import {
@@ -334,6 +337,15 @@ function calculateMaterialPreview(
     );
   }
 
+  if (
+    material.descripcion ===
+    "CAJA PLEGADIZA"
+  ) {
+    return calculateCajaPlegadizaPreview(
+      draft,
+    );
+  }
+
   return null;
 }
 
@@ -438,6 +450,116 @@ function calculateSelloGarantiaPreview(draft) {
     diferencia,
     porcentajeDiferencia,
     limitePermitido: 7,
+    estadoMaterial,
+  };
+}
+
+function calculateCajaPlegadizaPreview(
+  draft,
+) {
+  if (!draft) {
+    return {
+      totalRecibidaD: null,
+      resultadoE: null,
+      resultadoF: null,
+      resultadoG: null,
+      totalUtilizadaH: null,
+      diferencia: null,
+      porcentajeDiferencia: null,
+      limitePermitido: 1,
+      estadoMaterial:
+        "CAPTURA_INCOMPLETA",
+    };
+  }
+
+  const totalRecibidaD =
+    calcularTotalRecibido(
+      parseOptionalNumber(
+        draft.cantidadSurtidaA,
+      ),
+      parseOptionalNumber(
+        draft.cantidadAdicionalB,
+      ),
+      parseOptionalNumber(
+        draft.cantidadDevueltaC,
+      ),
+    );
+
+  const resultadoE =
+    calcularECajaPlegadiza(
+      parseOptionalNumber(
+        draft.cantidadRealAcondicionada,
+      ),
+    );
+
+  const resultadoF =
+    calcularFCajaPlegadiza(
+      parseOptionalNumber(
+        draft.otraMerma,
+      ),
+    );
+
+  const resultadoG =
+  calcularGCajaPlegadiza(
+    parseOptionalNumber(
+      draft.cajasTomadasMuestra,
+    ),
+    parseOptionalNumber(
+      draft.cajasUtilizadasArranque,
+    ),
+  );
+
+  const totalUtilizadaH =
+    calcularTotalUtilizadoAH(
+      resultadoE,
+      resultadoF,
+      resultadoG,
+    );
+
+  const diferencia =
+    calcularDiferenciaAH(
+      totalRecibidaD,
+      totalUtilizadaH,
+    );
+
+  const porcentajeDiferencia =
+    calcularPorcentajeDiferencia(
+      totalRecibidaD,
+      diferencia,
+    );
+
+  const faltanValores = [
+    totalRecibidaD,
+    resultadoE,
+    resultadoF,
+    resultadoG,
+    totalUtilizadaH,
+    diferencia,
+  ].some(
+    (value) =>
+      value === null ||
+      value === undefined,
+  );
+
+  const { estado: estadoMaterial } =
+    evaluarEstadoMaterial({
+      tipoMaterial: "CAJA PLEGADIZA",
+      d: totalRecibidaD,
+      diferencia,
+      porcentaje:
+        porcentajeDiferencia,
+      faltanValores,
+    });
+
+  return {
+    totalRecibidaD,
+    resultadoE,
+    resultadoF,
+    resultadoG,
+    totalUtilizadaH,
+    diferencia,
+    porcentajeDiferencia,
+    limitePermitido: 1,
     estadoMaterial,
   };
 }
@@ -619,6 +741,64 @@ function buildDirectMbrPayload(
   return payload;
 }
 
+function MatrixInputGroup({
+  children,
+  resultLabel,
+  resultValue,
+}) {
+  return (
+    <div className="matrix-input-group">
+      {children}
+
+      <div className="matrix-inline-result">
+        <small>{resultLabel}</small>
+        <strong>{resultValue}</strong>
+      </div>
+    </div>
+  );
+}
+
+function buildCajaPlegadizaPayload(
+  draft,
+) {
+  return {
+    cantidadSurtidaA:
+      parseOptionalNumber(
+        draft.cantidadSurtidaA,
+      ),
+
+    cantidadAdicionalB:
+      parseOptionalNumber(
+        draft.cantidadAdicionalB,
+      ),
+
+    cantidadDevueltaC:
+      parseOptionalNumber(
+        draft.cantidadDevueltaC,
+      ),
+
+    cantidadRealAcondicionada:
+      parseOptionalNumber(
+        draft.cantidadRealAcondicionada,
+      ),
+
+    otraMerma:
+      parseOptionalNumber(
+        draft.otraMerma,
+      ),
+
+    cajasTomadasMuestra:
+      parseOptionalNumber(
+        draft.cajasTomadasMuestra,
+      ),
+
+    cajasUtilizadasArranque:
+      parseOptionalNumber(
+        draft.cajasUtilizadasArranque,
+      ),
+  };
+}
+
 export default function MaterialsCaptureMatrix({
   materials = [],
   numeroOrden,
@@ -742,6 +922,7 @@ const [ materialMessages,setMaterialMessages,] = useState({});
     async function saveMatrixMaterial(material) {
         const draft = drafts[material.id];
         const isSelloGarantia = material.descripcion === "SELLO GARANTÍA";
+        const isCajaPlegadiza = material.descripcion === "CAJA PLEGADIZA";
 
         if (!draft) {
             setError(
@@ -758,21 +939,24 @@ const [ materialMessages,setMaterialMessages,] = useState({});
         const isInstructivo =
             material.descripcion === "INSTRUCTIVO";
 
-        if (!isFoil && !isInstructivo && !isSelloGarantia) {
+        if (!isFoil && !isInstructivo && !isSelloGarantia && !isCajaPlegadiza) {
             return;
         }
 
         
 
-        const payload = isFoil
-            ? buildDirectMbrPayload(
-                draft,
-                false,
-            )
-            : buildDirectMbrPayload(
-                draft,
-                true,
+        let payload;
+
+        if (isCajaPlegadiza) {
+          payload =
+            buildCajaPlegadizaPayload(draft);
+        } else {
+          payload =
+            buildDirectMbrPayload(
+              draft,
+              !isFoil,
             );
+        }
 
         setSavingMaterialIds((current) => ({
             ...current,
@@ -1005,8 +1189,9 @@ const [ materialMessages,setMaterialMessages,] = useState({});
                         material.descripcion === "FOIL PVC" || material.descripcion === "FOIL ALUMINIO";
                         const isInstructivo = material.descripcion === "INSTRUCTIVO";
                         const isSelloGarantia = material.descripcion === "SELLO GARANTÍA";
+                        const isCajaPlegadiza = material.descripcion === "CAJA PLEGADIZA";
 
-                        const isDirectInput = isFoil || isInstructivo || isSelloGarantia;
+                        const isDirectInput = isFoil || isInstructivo || isSelloGarantia || isCajaPlegadiza;
 
                         
 
@@ -1048,8 +1233,9 @@ const [ materialMessages,setMaterialMessages,] = useState({});
                     material.descripcion === "FOIL PVC" || material.descripcion === "FOIL ALUMINIO";
                     const isInstructivo = material.descripcion === "INSTRUCTIVO";
                     const isSelloGarantia = material.descripcion === "SELLO GARANTÍA";
+                    const isCajaPlegadiza = material.descripcion === "CAJA PLEGADIZA";
 
-                    const isDirectInput = isFoil || isInstructivo || isSelloGarantia;
+                    const isDirectInput = isFoil || isInstructivo || isSelloGarantia || isCajaPlegadiza;
                     
 
                     const draft = drafts[material.id];
@@ -1095,9 +1281,10 @@ const [ materialMessages,setMaterialMessages,] = useState({});
                     material.descripcion === "FOIL PVC" || material.descripcion === "FOIL ALUMINIO";
                     const isSelloGarantia = material.descripcion === "SELLO GARANTÍA";
                     const isInstructivo = material.descripcion === "INSTRUCTIVO";
+                    const isCajaPlegadiza = material.descripcion === "CAJA PLEGADIZA";
                     
 
-                    const isDirectInput =isFoil || isInstructivo || isSelloGarantia;
+                    const isDirectInput =isFoil || isInstructivo || isSelloGarantia || isCajaPlegadiza;
 
                     const draft = drafts[material.id];
 
@@ -1175,6 +1362,7 @@ const [ materialMessages,setMaterialMessages,] = useState({});
                         const isInstructivo = material.descripcion === "INSTRUCTIVO";
 
                         const isSelloGarantia = material.descripcion === "SELLO GARANTÍA";
+                        const isCajaPlegadiza = material.descripcion === "CAJA PLEGADIZA";
 
                         const isManualE =
                           isFoil ||
@@ -1182,26 +1370,55 @@ const [ materialMessages,setMaterialMessages,] = useState({});
                           isSelloGarantia;
 
                         const draft = drafts[material.id];
+                        const preview = calculateMaterialPreview(material,draft,);
+
 
                         return (
                         <td key={material.id}>
-                            {isManualE ? (
-                            <MatrixNumberInput
+                            {isCajaPlegadiza ? (
+                              <MatrixInputGroup
+                                resultLabel="Resultado E"
+                                resultValue={formatQuantity(
+                                  preview?.resultadoE,
+                                  material.unidadMedida,
+                                )}
+                              >
+                                <span className="matrix-input-label">
+                                  Cantidad real acondicionada
+                                </span>
+
+                                <MatrixNumberInput
+                                  value={
+                                    draft?.cantidadRealAcondicionada ??
+                                    ""
+                                  }
+                                  unit={material.unidadMedida}
+                                  onChange={(value) =>
+                                    updateDraft(
+                                      material.id,
+                                      "cantidadRealAcondicionada",
+                                      value,
+                                    )
+                                  }
+                                />
+                              </MatrixInputGroup>
+                            ) : isManualE ? (
+                              <MatrixNumberInput
                                 value={draft?.resultadoE ?? ""}
-                                unit={isFoil ? "kg" : "PZA"}
+                                unit={material.unidadMedida}
                                 onChange={(value) =>
-                                updateDraft(
+                                  updateDraft(
                                     material.id,
                                     "resultadoE",
                                     value,
-                                )
+                                  )
                                 }
-                            />
+                              />
                             ) : (
-                            formatQuantity(
+                              formatQuantity(
                                 material.resultadoE,
                                 material.unidadMedida,
-                            )
+                              )
                             )}
                         </td>
                         );
@@ -1219,7 +1436,8 @@ const [ materialMessages,setMaterialMessages,] = useState({});
 
                         const draft = drafts[material.id];
                         const isSelloGarantia = material.descripcion === "SELLO GARANTÍA";
-
+                        const isCajaPlegadiza = material.descripcion === "CAJA PLEGADIZA";
+                        const preview =calculateMaterialPreview(material,draft,);
                         const isManualF =
                           isFoil ||
                           isInstructivo ||
@@ -1227,23 +1445,47 @@ const [ materialMessages,setMaterialMessages,] = useState({});
 
                         return (
                         <td key={material.id}>
-                            {isManualF ? (
-                            <MatrixNumberInput
+                            {isCajaPlegadiza ? (
+                              <MatrixInputGroup
+                                resultLabel="Resultado F"
+                                resultValue={formatQuantity(
+                                  preview?.resultadoF,
+                                  material.unidadMedida,
+                                )}
+                              >
+                                <span className="matrix-input-label">
+                                  Merma registrada
+                                </span>
+
+                                <MatrixNumberInput
+                                  value={draft?.otraMerma ?? ""}
+                                  unit={material.unidadMedida}
+                                  onChange={(value) =>
+                                    updateDraft(
+                                      material.id,
+                                      "otraMerma",
+                                      value,
+                                    )
+                                  }
+                                />
+                              </MatrixInputGroup>
+                            ) : isManualF ? (
+                              <MatrixNumberInput
                                 value={draft?.resultadoF ?? ""}
-                                unit={isFoil ? "kg" : "PZA"}
+                                unit={material.unidadMedida}
                                 onChange={(value) =>
-                                updateDraft(
+                                  updateDraft(
                                     material.id,
                                     "resultadoF",
                                     value,
-                                )
+                                  )
                                 }
-                            />
+                              />
                             ) : (
-                            formatQuantity(
+                              formatQuantity(
                                 material.resultadoF,
                                 material.unidadMedida,
-                            )
+                              )
                             )}
                         </td>
                         );
@@ -1267,12 +1509,15 @@ const [ materialMessages,setMaterialMessages,] = useState({});
                     const isSelloGarantia =
                       material.descripcion ===
                       "SELLO GARANTÍA";
-
+                      
+                    const isCajaPlegadiza = material.descripcion === "CAJA PLEGADIZA";
+                    const draft = drafts[material.id];
+                    const preview = calculateMaterialPreview( material,draft,);  
                     const isManualG =
                       isInstructivo ||
                       isSelloGarantia;
 
-                    const draft = drafts[material.id];
+                    
 
                     return (
                       <td
@@ -1285,11 +1530,55 @@ const [ materialMessages,setMaterialMessages,] = useState({});
                       >
                         {isFoil ? (
                           "No aplica"
+                        ) : isCajaPlegadiza ? (
+                          <MatrixInputGroup
+                            resultLabel="Resultado G"
+                            resultValue={formatQuantity(
+                              preview?.resultadoG,
+                              material.unidadMedida,
+                            )}
+                          >
+                            <span className="matrix-input-label">
+                              Cajas tomadas como muestra
+                            </span>
+
+                            <MatrixNumberInput
+                              value={
+                                draft?.cajasTomadasMuestra ??
+                                ""
+                              }
+                              unit={material.unidadMedida}
+                              onChange={(value) =>
+                                updateDraft(
+                                  material.id,
+                                  "cajasTomadasMuestra",
+                                  value,
+                                )
+                              }
+                            />
+
+                            <span className="matrix-input-label">
+                              Cajas utilizadas en arranque
+                            </span>
+
+                            <MatrixNumberInput
+                              value={
+                                draft?.cajasUtilizadasArranque ??
+                                ""
+                              }
+                              unit={material.unidadMedida}
+                              onChange={(value) =>
+                                updateDraft(
+                                  material.id,
+                                  "cajasUtilizadasArranque",
+                                  value,
+                                )
+                              }
+                            />
+                          </MatrixInputGroup>
                         ) : isManualG ? (
                           <MatrixNumberInput
-                            value={
-                              draft?.resultadoG ?? ""
-                            }
+                            value={draft?.resultadoG ?? ""}
                             unit={material.unidadMedida}
                             onChange={(value) =>
                               updateDraft(
@@ -1482,6 +1771,7 @@ const [ materialMessages,setMaterialMessages,] = useState({});
                             "FOIL ALUMINIO",
                             "INSTRUCTIVO",
                             "SELLO GARANTÍA",
+                            "CAJA PLEGADIZA",
                         ].includes(material.descripcion);
 
                         const isSaving = Boolean(

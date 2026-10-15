@@ -55,6 +55,7 @@ export default function ReconciliationMaterialsClient({
       <MaterialsCaptureMatrix
         materials={materials}
         numeroOrden={numeroOrden}
+        conciliacionId={conciliacionId}
         onMaterialCreated={
           handleMaterialCreated
         }

@@ -13,6 +13,9 @@
     calcularFInstructivo,
     calcularGInstructivo,
     calcularTotalUtilizadoAH,
+    calcularESelloGarantia,
+    calcularFSelloGarantia,
+    calcularGSelloGarantia,
 } from "../../../lib/calculosMateriales";
 
 import {
@@ -322,7 +325,121 @@ function calculateMaterialPreview(
     );
   }
 
+  if (
+    material.descripcion ===
+    "SELLO GARANTÍA"
+  ) {
+    return calculateSelloGarantiaPreview(
+      draft,
+    );
+  }
+
   return null;
+}
+
+function calculateSelloGarantiaPreview(draft) {
+  if (!draft) {
+    return {
+      totalRecibidaD: null,
+      resultadoE: null,
+      resultadoF: null,
+      resultadoG: null,
+      totalUtilizadaH: null,
+      diferencia: null,
+      porcentajeDiferencia: null,
+      limitePermitido: 7,
+      estadoMaterial:
+        "CAPTURA_INCOMPLETA",
+    };
+  }
+
+  const totalRecibidaD =
+    calcularTotalRecibido(
+      parseOptionalNumber(
+        draft.cantidadSurtidaA,
+      ),
+      parseOptionalNumber(
+        draft.cantidadAdicionalB,
+      ),
+      parseOptionalNumber(
+        draft.cantidadDevueltaC,
+      ),
+    );
+
+  const resultadoE =
+    calcularESelloGarantia(
+      parseOptionalNumber(
+        draft.resultadoE,
+      ),
+    );
+
+  const resultadoF =
+    calcularFSelloGarantia(
+      parseOptionalNumber(
+        draft.resultadoF,
+      ),
+    );
+
+  const resultadoG =
+    calcularGSelloGarantia(
+      parseOptionalNumber(
+        draft.resultadoG,
+      ),
+    );
+
+  const totalUtilizadaH =
+    calcularTotalUtilizadoAH(
+      resultadoE,
+      resultadoF,
+      resultadoG,
+    );
+
+  const diferencia =
+    calcularDiferenciaAH(
+      totalRecibidaD,
+      totalUtilizadaH,
+    );
+
+  const porcentajeDiferencia =
+    calcularPorcentajeDiferencia(
+      totalRecibidaD,
+      diferencia,
+    );
+
+  const faltanValores = [
+    totalRecibidaD,
+    resultadoE,
+    resultadoF,
+    resultadoG,
+    totalUtilizadaH,
+    diferencia,
+  ].some(
+    (value) =>
+      value === null ||
+      value === undefined,
+  );
+
+  const { estado: estadoMaterial } =
+    evaluarEstadoMaterial({
+      tipoMaterial: "SELLO GARANTÍA",
+      d: totalRecibidaD,
+      diferencia,
+      porcentaje:
+        porcentajeDiferencia,
+      faltanValores,
+    });
+
+  return {
+    totalRecibidaD,
+    resultadoE,
+    resultadoF,
+    resultadoG,
+    totalUtilizadaH,
+    diferencia,
+    porcentajeDiferencia,
+    limitePermitido: 7,
+    estadoMaterial,
+  };
 }
 
 function createMaterialDraft(material) {
@@ -624,6 +741,7 @@ const [ materialMessages,setMaterialMessages,] = useState({});
 
     async function saveMatrixMaterial(material) {
         const draft = drafts[material.id];
+        const isSelloGarantia = material.descripcion === "SELLO GARANTÍA";
 
         if (!draft) {
             setError(
@@ -640,9 +758,11 @@ const [ materialMessages,setMaterialMessages,] = useState({});
         const isInstructivo =
             material.descripcion === "INSTRUCTIVO";
 
-        if (!isFoil && !isInstructivo) {
+        if (!isFoil && !isInstructivo && !isSelloGarantia) {
             return;
         }
+
+        
 
         const payload = isFoil
             ? buildDirectMbrPayload(
@@ -884,8 +1004,11 @@ const [ materialMessages,setMaterialMessages,] = useState({});
                         const isFoil =
                         material.descripcion === "FOIL PVC" || material.descripcion === "FOIL ALUMINIO";
                         const isInstructivo = material.descripcion === "INSTRUCTIVO";
+                        const isSelloGarantia = material.descripcion === "SELLO GARANTÍA";
 
-                        const isDirectInput = isFoil || isInstructivo;
+                        const isDirectInput = isFoil || isInstructivo || isSelloGarantia;
+
+                        
 
                         const draft = drafts[material.id];
 
@@ -924,8 +1047,10 @@ const [ materialMessages,setMaterialMessages,] = useState({});
                     const isFoil =
                     material.descripcion === "FOIL PVC" || material.descripcion === "FOIL ALUMINIO";
                     const isInstructivo = material.descripcion === "INSTRUCTIVO";
+                    const isSelloGarantia = material.descripcion === "SELLO GARANTÍA";
 
-                    const isDirectInput = isFoil || isInstructivo;
+                    const isDirectInput = isFoil || isInstructivo || isSelloGarantia;
+                    
 
                     const draft = drafts[material.id];
 
@@ -968,9 +1093,11 @@ const [ materialMessages,setMaterialMessages,] = useState({});
                 {materials.map((material) => {
                     const isFoil =
                     material.descripcion === "FOIL PVC" || material.descripcion === "FOIL ALUMINIO";
+                    const isSelloGarantia = material.descripcion === "SELLO GARANTÍA";
                     const isInstructivo = material.descripcion === "INSTRUCTIVO";
+                    
 
-                    const isDirectInput =isFoil || isInstructivo;
+                    const isDirectInput =isFoil || isInstructivo || isSelloGarantia;
 
                     const draft = drafts[material.id];
 
@@ -1047,7 +1174,12 @@ const [ materialMessages,setMaterialMessages,] = useState({});
 
                         const isInstructivo = material.descripcion === "INSTRUCTIVO";
 
-                        const isManualE = isFoil || isInstructivo;
+                        const isSelloGarantia = material.descripcion === "SELLO GARANTÍA";
+
+                        const isManualE =
+                          isFoil ||
+                          isInstructivo ||
+                          isSelloGarantia;
 
                         const draft = drafts[material.id];
 
@@ -1086,7 +1218,12 @@ const [ materialMessages,setMaterialMessages,] = useState({});
                         const isInstructivo = material.descripcion === "INSTRUCTIVO";
 
                         const draft = drafts[material.id];
-                        const isManualF = isFoil || isInstructivo;
+                        const isSelloGarantia = material.descripcion === "SELLO GARANTÍA";
+
+                        const isManualF =
+                          isFoil ||
+                          isInstructivo ||
+                          isSelloGarantia;
 
                         return (
                         <td key={material.id}>
@@ -1113,56 +1250,64 @@ const [ materialMessages,setMaterialMessages,] = useState({});
                     })}
                 </tr>
                 <tr>
-                    <th className="matrix-concept-column">
-                        G. Muestras
-                    </th>
+                  <th className="matrix-concept-column">
+                    G. Muestras
+                  </th>
 
-                    {materials.map((material) => {
-                        const isFoil = [
-                            "FOIL PVC",
-                            "FOIL ALUMINIO",
-                        ].includes(material.descripcion);
+                  {materials.map((material) => {
+                    const isFoil = [
+                      "FOIL PVC",
+                      "FOIL ALUMINIO",
+                    ].includes(material.descripcion);
 
-                        const isInstructivo =
-                            material.descripcion ===
-                            "INSTRUCTIVO";
+                    const isInstructivo =
+                      material.descripcion ===
+                      "INSTRUCTIVO";
 
-                        const draft = drafts[material.id];
+                    const isSelloGarantia =
+                      material.descripcion ===
+                      "SELLO GARANTÍA";
 
-                        return (
-                            <td
-                            key={material.id}
-                            className={
-                                isFoil
-                                ? "matrix-calculated-cell"
-                                : undefined
+                    const isManualG =
+                      isInstructivo ||
+                      isSelloGarantia;
+
+                    const draft = drafts[material.id];
+
+                    return (
+                      <td
+                        key={material.id}
+                        className={
+                          isFoil
+                            ? "matrix-calculated-cell"
+                            : undefined
+                        }
+                      >
+                        {isFoil ? (
+                          "No aplica"
+                        ) : isManualG ? (
+                          <MatrixNumberInput
+                            value={
+                              draft?.resultadoG ?? ""
                             }
-                            >
-                            {isFoil ? (
-                                "No aplica"
-                            ) : isInstructivo ? (
-                                <MatrixNumberInput
-                                value={
-                                    draft?.resultadoG ?? ""
-                                }
-                                unit="PZA"
-                                onChange={(value) =>
-                                    updateDraft(
-                                    material.id,
-                                    "resultadoG",
-                                    value,
-                                    )
-                                }
-                                />
-                            ) : (
-                                formatQuantity(
-                                material.resultadoG,
-                                material.unidadMedida,
-                                )
-                            )}
-                            </td>
-                        );
-                    })}
+                            unit={material.unidadMedida}
+                            onChange={(value) =>
+                              updateDraft(
+                                material.id,
+                                "resultadoG",
+                                value,
+                              )
+                            }
+                          />
+                        ) : (
+                          formatQuantity(
+                            material.resultadoG,
+                            material.unidadMedida,
+                          )
+                        )}
+                      </td>
+                    );
+                  })}
                 </tr>
                 
                 <tr>
@@ -1336,6 +1481,7 @@ const [ materialMessages,setMaterialMessages,] = useState({});
                             "FOIL PVC",
                             "FOIL ALUMINIO",
                             "INSTRUCTIVO",
+                            "SELLO GARANTÍA",
                         ].includes(material.descripcion);
 
                         const isSaving = Boolean(

@@ -22,6 +22,9 @@
     calcularEEtiquetaColectiva,
     calcularFEtiquetaColectiva,
     calcularGEtiquetaColectiva,
+    calcularECajaEmpaque,
+    calcularFCajaEmpaque,
+    calcularGCajaEmpaque,
 } from "../../../lib/calculosMateriales";
 
 import {
@@ -358,6 +361,15 @@ function calculateMaterialPreview(
     );
   }
 
+  if (
+    material.descripcion ===
+    "CAJA EMPAQUE"
+  ) {
+    return calculateCajaEmpaquePreview(
+      draft,
+    );
+  }
+
   return null;
 }
 
@@ -687,6 +699,116 @@ const resultadoG =
   };
 }
 
+function calculateCajaEmpaquePreview(
+  draft,
+) {
+  if (!draft) {
+    return {
+      totalRecibidaD: null,
+      resultadoE: null,
+      resultadoF: null,
+      resultadoG: null,
+      totalUtilizadaH: null,
+      diferencia: null,
+      porcentajeDiferencia: null,
+      limitePermitido: 10,
+      estadoMaterial:
+        "CAPTURA_INCOMPLETA",
+    };
+  }
+
+  const totalRecibidaD =
+    calcularTotalRecibido(
+      parseOptionalNumber(
+        draft.cantidadSurtidaA,
+      ),
+      parseOptionalNumber(
+        draft.cantidadAdicionalB,
+      ),
+      parseOptionalNumber(
+        draft.cantidadDevueltaC,
+      ),
+    );
+
+  const resultadoE =
+    calcularECajaEmpaque(
+      parseOptionalNumber(
+        draft.cantidadRealAcondicionada,
+      ),
+      parseOptionalNumber(
+        draft.capacidadCajaEmpaque,
+      ),
+    );
+
+  const resultadoF =
+    calcularFCajaEmpaque(
+      parseOptionalNumber(
+        draft.otraMerma,
+      ),
+    );
+
+  const resultadoG =
+    calcularGCajaEmpaque(
+      parseOptionalNumber(
+        draft.cajasTomadasMuestra,
+      ),
+    );
+
+  const totalUtilizadaH =
+    calcularTotalUtilizadoAH(
+      resultadoE,
+      resultadoF,
+      resultadoG,
+    );
+
+  const diferencia =
+    calcularDiferenciaAH(
+      totalRecibidaD,
+      totalUtilizadaH,
+    );
+
+  const porcentajeDiferencia =
+    calcularPorcentajeDiferencia(
+      totalRecibidaD,
+      diferencia,
+    );
+
+  const faltanValores = [
+    totalRecibidaD,
+    resultadoE,
+    resultadoF,
+    resultadoG,
+    totalUtilizadaH,
+    diferencia,
+  ].some(
+    (value) =>
+      value === null ||
+      value === undefined,
+  );
+
+  const { estado: estadoMaterial } =
+    evaluarEstadoMaterial({
+      tipoMaterial: "CAJA EMPAQUE",
+      d: totalRecibidaD,
+      diferencia,
+      porcentaje:
+        porcentajeDiferencia,
+      faltanValores,
+    });
+
+  return {
+    totalRecibidaD,
+    resultadoE,
+    resultadoF,
+    resultadoG,
+    totalUtilizadaH,
+    diferencia,
+    porcentajeDiferencia,
+    limitePermitido: 10,
+    estadoMaterial,
+  };
+}
+
 function createMaterialDraft(material) {
   const isTablet =
     material.descripcion === "TABLETA";
@@ -963,6 +1085,47 @@ function buildEtiquetaColectivaPayload(
   };
 }
 
+function buildCajaEmpaquePayload(
+  draft,
+) {
+  return {
+    cantidadSurtidaA:
+      parseOptionalNumber(
+        draft.cantidadSurtidaA,
+      ),
+
+    cantidadAdicionalB:
+      parseOptionalNumber(
+        draft.cantidadAdicionalB,
+      ),
+
+    cantidadDevueltaC:
+      parseOptionalNumber(
+        draft.cantidadDevueltaC,
+      ),
+
+    cantidadRealAcondicionada:
+      parseOptionalNumber(
+        draft.cantidadRealAcondicionada,
+      ),
+
+    capacidadCajaEmpaque:
+      parseOptionalNumber(
+        draft.capacidadCajaEmpaque,
+      ),
+
+    otraMerma:
+      parseOptionalNumber(
+        draft.otraMerma,
+      ),
+
+    cajasTomadasMuestra:
+      parseOptionalNumber(
+        draft.cajasTomadasMuestra,
+      ),
+  };
+}
+
 export default function MaterialsCaptureMatrix({
   materials = [],
   numeroOrden,
@@ -1087,6 +1250,14 @@ const [ materialMessages,setMaterialMessages,] = useState({});
         const draft = drafts[material.id];
         const isSelloGarantia = material.descripcion === "SELLO GARANTÍA";
         const isCajaPlegadiza = material.descripcion === "CAJA PLEGADIZA";
+        const isInstructivo = material.descripcion === "INSTRUCTIVO";
+        const isEtiquetaColectiva = material.descripcion === "ETIQUETA COLECTIVA";
+        const isCajaEmpaque = material.descripcion === "CAJA EMPAQUE";
+        const isFoil = [
+            "FOIL PVC",
+            "FOIL ALUMINIO",
+        ].includes(material.descripcion);
+    
 
         if (!draft) {
             setError(
@@ -1095,17 +1266,10 @@ const [ materialMessages,setMaterialMessages,] = useState({});
             return;
         }
 
-        const isFoil = [
-            "FOIL PVC",
-            "FOIL ALUMINIO",
-        ].includes(material.descripcion);
+        
 
-        const isInstructivo =
-            material.descripcion === "INSTRUCTIVO";
-
-        const isEtiquetaColectiva = material.descripcion === "ETIQUETA COLECTIVA";
-
-        if (!isFoil && !isInstructivo && !isSelloGarantia && !isCajaPlegadiza && !isEtiquetaColectiva) {
+        
+        if (!isFoil && !isInstructivo && !isSelloGarantia && !isCajaPlegadiza && !isEtiquetaColectiva && !isCajaEmpaque) {
             return;
         }
 
@@ -1113,16 +1277,6 @@ const [ materialMessages,setMaterialMessages,] = useState({});
 
         let payload;
 
-        if (isCajaPlegadiza) {
-          payload =
-            buildCajaPlegadizaPayload(draft);
-        } else {
-          payload =
-            buildDirectMbrPayload(
-              draft,
-              !isFoil,
-            );
-        }
 
 
         if (isCajaPlegadiza) {
@@ -1133,6 +1287,8 @@ const [ materialMessages,setMaterialMessages,] = useState({});
             buildEtiquetaColectivaPayload(
               draft,
             );
+        } else if (isCajaEmpaque) {
+          payload = buildCajaEmpaquePayload(draft);
         } else {
           payload =
             buildDirectMbrPayload(
@@ -1374,10 +1530,9 @@ const [ materialMessages,setMaterialMessages,] = useState({});
                         const isSelloGarantia = material.descripcion === "SELLO GARANTÍA";
                         const isCajaPlegadiza = material.descripcion === "CAJA PLEGADIZA";
                         const isEtiquetaColectiva = material.descripcion === "ETIQUETA COLECTIVA";
+                        const isCajaEmpaque = material.descripcion === "CAJA EMPAQUE";
 
-                        const isDirectInput = isFoil || isInstructivo || isSelloGarantia || isCajaPlegadiza || isEtiquetaColectiva;
-
-                        
+                        const isDirectInput = isFoil || isInstructivo || isSelloGarantia || isCajaPlegadiza || isEtiquetaColectiva || isCajaEmpaque;
 
                         const draft = drafts[material.id];
 
@@ -1419,9 +1574,9 @@ const [ materialMessages,setMaterialMessages,] = useState({});
                     const isSelloGarantia = material.descripcion === "SELLO GARANTÍA";
                     const isCajaPlegadiza = material.descripcion === "CAJA PLEGADIZA";
                     const isEtiquetaColectiva = material.descripcion === "ETIQUETA COLECTIVA";
+                    const isCajaEmpaque = material.descripcion === "CAJA EMPAQUE";
 
-                    const isDirectInput = isFoil || isInstructivo || isSelloGarantia || isCajaPlegadiza || isEtiquetaColectiva;
-                    
+                    const isDirectInput = isFoil || isInstructivo || isSelloGarantia || isCajaPlegadiza || isEtiquetaColectiva || isCajaEmpaque;
 
                     const draft = drafts[material.id];
 
@@ -1468,10 +1623,9 @@ const [ materialMessages,setMaterialMessages,] = useState({});
                     const isInstructivo = material.descripcion === "INSTRUCTIVO";
                     const isCajaPlegadiza = material.descripcion === "CAJA PLEGADIZA";
                     const isEtiquetaColectiva = material.descripcion === "ETIQUETA COLECTIVA";
-                    
-                    
+                    const isCajaEmpaque = material.descripcion === "CAJA EMPAQUE";
 
-                    const isDirectInput =isFoil || isInstructivo || isSelloGarantia || isCajaPlegadiza || isEtiquetaColectiva;
+                    const isDirectInput =isFoil || isInstructivo || isSelloGarantia || isCajaPlegadiza || isEtiquetaColectiva || isCajaEmpaque;
 
                     const draft = drafts[material.id];
 
@@ -1482,7 +1636,7 @@ const [ materialMessages,setMaterialMessages,] = useState({});
                             value={
                             draft?.cantidadDevueltaC ?? ""
                             }
-                            unit={isFoil ? "kg" : "PZA"}
+                            unit={material.unidadMedida}
                             onChange={(value) =>
                             updateDraft(
                                 material.id,
@@ -1551,6 +1705,9 @@ const [ materialMessages,setMaterialMessages,] = useState({});
                         const isSelloGarantia = material.descripcion === "SELLO GARANTÍA";
                         const isCajaPlegadiza = material.descripcion === "CAJA PLEGADIZA";
                         const isEtiquetaColectiva = material.descripcion === "ETIQUETA COLECTIVA";
+                        const isCajaEmpaque = material.descripcion === "CAJA EMPAQUE";
+
+                        const usesCapacityCalculation = isEtiquetaColectiva || isCajaEmpaque;
 
                         const isManualE =
                           isFoil ||
@@ -1590,7 +1747,7 @@ const [ materialMessages,setMaterialMessages,] = useState({});
                                 }
                               />
                             </MatrixInputGroup>
-                          ) : isEtiquetaColectiva ? (
+                          ) : usesCapacityCalculation ? (
                             <MatrixInputGroup
                               resultLabel="Resultado E"
                               resultValue={formatQuantity(
@@ -1673,6 +1830,11 @@ const [ materialMessages,setMaterialMessages,] = useState({});
                         const isSelloGarantia = material.descripcion === "SELLO GARANTÍA";
                         const isCajaPlegadiza = material.descripcion === "CAJA PLEGADIZA";
                         const isEtiquetaColectiva = material.descripcion === "ETIQUETA COLECTIVA";
+                        const isCajaEmpaque = material.descripcion === "CAJA EMPAQUE";
+                        const usesCalculatedMerma =
+                        isCajaPlegadiza ||
+                        isEtiquetaColectiva ||
+                        isCajaEmpaque;
                         const preview =calculateMaterialPreview(material,draft,);
                         const isManualF =
                           isFoil ||
@@ -1681,32 +1843,7 @@ const [ materialMessages,setMaterialMessages,] = useState({});
 
                         return (
                         <td key={material.id}>
-                            {isCajaPlegadiza ? (
-                              <MatrixInputGroup
-                                resultLabel="Resultado F"
-                                resultValue={formatQuantity(
-                                  preview?.resultadoF,
-                                  material.unidadMedida,
-                                )}
-                              >
-                                <span className="matrix-input-label">
-                                  Merma registrada
-                                </span>
-
-                               
-                                <MatrixNumberInput
-                                  value={draft?.otraMerma ?? ""}
-                                  unit={material.unidadMedida}
-                                  onChange={(value) =>
-                                    updateDraft(
-                                      material.id,
-                                      "otraMerma",
-                                      value,
-                                    )
-                                  }
-                                />
-                              </MatrixInputGroup>
-                            ) : isEtiquetaColectiva ? (
+                            {usesCalculatedMerma ? (
                               <MatrixInputGroup
                                 resultLabel="Resultado F"
                                 resultValue={formatQuantity(
@@ -1773,11 +1910,11 @@ const [ materialMessages,setMaterialMessages,] = useState({});
                       
                     const isCajaPlegadiza = material.descripcion === "CAJA PLEGADIZA";
                     const isEtiquetaColectiva = material.descripcion === "ETIQUETA COLECTIVA";
+                    const isCajaEmpaque = material.descripcion === "CAJA EMPAQUE";
+                    const usesSingleSampleInput = isEtiquetaColectiva ||isCajaEmpaque;
                     const draft = drafts[material.id];
                     const preview = calculateMaterialPreview( material,draft,);  
-                    const isManualG =
-                      isInstructivo ||
-                      isSelloGarantia;
+                    const isManualG = isInstructivo || isSelloGarantia;
 
                     
 
@@ -1806,8 +1943,7 @@ const [ materialMessages,setMaterialMessages,] = useState({});
 
                             <MatrixNumberInput
                               value={
-                                draft?.cajasTomadasMuestra ??
-                                ""
+                                draft?.cajasTomadasMuestra ?? ""
                               }
                               unit={material.unidadMedida}
                               onChange={(value) =>
@@ -1838,7 +1974,7 @@ const [ materialMessages,setMaterialMessages,] = useState({});
                               }
                             />
                           </MatrixInputGroup>
-                        ) : isEtiquetaColectiva ? (
+                        ) : usesSingleSampleInput ? (
                           <MatrixInputGroup
                             resultLabel="Resultado G"
                             resultValue={formatQuantity(
@@ -1847,34 +1983,9 @@ const [ materialMessages,setMaterialMessages,] = useState({});
                             )}
                           >
                             <span className="matrix-input-label">
-                              Etiquetas tomadas como muestra
-                            </span>
-
-                            <MatrixNumberInput
-                              value={
-                                draft?.cajasTomadasMuestra ??
-                                ""
-                              }
-                              unit={material.unidadMedida}
-                              onChange={(value) =>
-                                updateDraft(
-                                  material.id,
-                                  "cajasTomadasMuestra",
-                                  value,
-                                )
-                              }
-                            />
-                          </MatrixInputGroup>
-                        ) : isEtiquetaColectiva ? (
-                          <MatrixInputGroup
-                            resultLabel="Resultado G"
-                            resultValue={formatQuantity(
-                              preview?.resultadoG,
-                              material.unidadMedida,
-                            )}
-                          >
-                            <span className="matrix-input-label">
-                              Etiquetas tomadas como muestra
+                              {isEtiquetaColectiva
+                                ? "Etiquetas tomadas como muestra"
+                                : "Cajas de empaque tomadas como muestra"}
                             </span>
 
                             <MatrixNumberInput
@@ -2088,6 +2199,7 @@ const [ materialMessages,setMaterialMessages,] = useState({});
                             "SELLO GARANTÍA",
                             "CAJA PLEGADIZA",
                             "ETIQUETA COLECTIVA",
+                            "CAJA EMPAQUE",
                         ].includes(material.descripcion);
 
                         const isSaving = Boolean(

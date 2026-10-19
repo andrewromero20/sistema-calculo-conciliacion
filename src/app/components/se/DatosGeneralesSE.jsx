@@ -92,7 +92,7 @@ export default function DatosGeneralesSE({
                 />
                 {isUnmodifiedField("supervisorPreparacion") && (
                   <span className="text-[10px] text-blue-600 font-semibold mt-0.5 block">
-                    Sin modificar (registro anterior)
+                    Dato exactamente igual al registro anterior
                   </span>
                 )}
               </div>
@@ -112,7 +112,7 @@ export default function DatosGeneralesSE({
                 />
                 {isUnmodifiedField("supervisorTabRecub") && (
                   <span className="text-[10px] text-blue-600 font-semibold mt-0.5 block">
-                    Sin modificar (registro anterior)
+                    Dato exactamente igual al registro anterior
                   </span>
                 )}
               </div>
@@ -161,7 +161,7 @@ export default function DatosGeneralesSE({
                 />
                 {isUnmodifiedField("codigoMaterial") && !errors.codigoMaterial && (
                   <span className="text-[10px] text-blue-600 font-semibold mt-0.5 block">
-                    Sin modificar (registro anterior)
+                    Dato exactamente igual al registro anterior
                   </span>
                 )}
                 {errors.codigoMaterial && (
@@ -187,7 +187,7 @@ export default function DatosGeneralesSE({
               />
               {isUnmodifiedField("producto") && (
                 <span className="text-[10px] text-blue-600 font-semibold mt-0.5 block">
-                  Sin modificar (registro anterior)
+                  Dato exactamente igual al registro anterior
                 </span>
               )}
             </div>
@@ -223,7 +223,7 @@ export default function DatosGeneralesSE({
                 />
                 {isUnmodifiedField("tamanoLoteEstandar") && !errors.tamanoLoteEstandar && (
                   <span className="text-[10px] text-blue-600 font-semibold mt-0.5 block">
-                    Sin modificar (registro anterior)
+                    Dato exactamente igual al registro anterior
                   </span>
                 )}
                 {errors.tamanoLoteEstandar && (
@@ -255,7 +255,7 @@ export default function DatosGeneralesSE({
                 />
                 {isUnmodifiedField("lote") && !errors.lote && (
                   <span className="text-[10px] text-blue-600 font-semibold mt-0.5 block">
-                    Sin modificar (mismo lote previo)
+                    Dato exactamente igual al registro anterior
                   </span>
                 )}
                 {errors.lote && (
@@ -346,7 +346,7 @@ export default function DatosGeneralesSE({
                 </span>
                 {isUnmodifiedField("cantTabPorPza") && (
                   <span className="text-[10px] text-blue-700 font-semibold block">
-                    Sin modificar (registro anterior)
+                    Dato exactamente igual al registro anterior
                   </span>
                 )}
               </div>
@@ -384,7 +384,7 @@ export default function DatosGeneralesSE({
                 />
                 {isUnmodifiedField("pesoPromedio") && !errors.pesoPromedio && (
                   <span className="text-[10px] text-blue-600 font-semibold mt-0.5 block">
-                    Sin modificar (registro anterior)
+                    Dato exactamente igual al registro anterior
                   </span>
                 )}
                 {errors.pesoPromedio && (
@@ -424,7 +424,7 @@ export default function DatosGeneralesSE({
                 />
                 {isUnmodifiedField("muestrasTabRecub") && !errors.muestrasTabRecub && (
                   <span className="text-[10px] text-blue-600 font-semibold mt-0.5 block">
-                    Sin modificar (registro anterior)
+                    Dato exactamente igual al registro anterior
                   </span>
                 )}
                 {errors.muestrasTabRecub && (
@@ -560,7 +560,7 @@ export default function DatosGeneralesSE({
                 />
                 {isUnmodifiedField("ctecGranelSap") && !errors.ctecGranelSap && (
                   <span className="text-[10px] text-blue-600 font-semibold mt-0.5 block">
-                    Sin modificar (registro anterior)
+                    Dato exactamente igual al registro anterior
                   </span>
                 )}
                 {errors.ctecGranelSap && (
@@ -607,7 +607,7 @@ export default function DatosGeneralesSE({
             />
             {isUnmodifiedField("fechaInicioTableteado") && !errors.fechaInicioTableteado && (
               <span className="text-[10px] text-blue-600 font-semibold mt-0.5 block">
-                Sin modificar
+                Dato exactamente igual al registro anterior
               </span>
             )}
             {errors.fechaInicioTableteado && (
@@ -638,7 +638,7 @@ export default function DatosGeneralesSE({
             />
             {isUnmodifiedField("fechaFinTableteado") && !errors.fechaFinTableteado && (
               <span className="text-[10px] text-blue-600 font-semibold mt-0.5 block">
-                Sin modificar
+                Dato exactamente igual al registro anterior
               </span>
             )}
             {errors.fechaFinTableteado && (
@@ -669,7 +669,7 @@ export default function DatosGeneralesSE({
             />
             {isUnmodifiedField("fechaInicioRecubrimiento") && !errors.fechaInicioRecubrimiento && (
               <span className="text-[10px] text-blue-600 font-semibold mt-0.5 block">
-                Sin modificar
+                Dato exactamente igual al registro anterior
               </span>
             )}
             {errors.fechaInicioRecubrimiento && (
@@ -700,7 +700,7 @@ export default function DatosGeneralesSE({
             />
             {isUnmodifiedField("fechaFinPrimeraCarga") && !errors.fechaFinPrimeraCarga && (
               <span className="text-[10px] text-blue-600 font-semibold mt-0.5 block">
-                Sin modificar
+                Dato exactamente igual al registro anterior
               </span>
             )}
             {errors.fechaFinPrimeraCarga && (
@@ -731,7 +731,7 @@ export default function DatosGeneralesSE({
             />
             {isUnmodifiedField("fechaFinRecubrimiento") && !errors.fechaFinRecubrimiento && (
               <span className="text-[10px] text-blue-600 font-semibold mt-0.5 block">
-                Sin modificar
+                Dato exactamente igual al registro anterior
               </span>
             )}
             {errors.fechaFinRecubrimiento && (

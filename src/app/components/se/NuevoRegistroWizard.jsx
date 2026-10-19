@@ -208,15 +208,12 @@ export default function NuevoRegistroWizard() {
       fechaFinRecubrimiento: prev.fechaFinRecubrimiento
         ? new Date(prev.fechaFinRecubrimiento).toISOString().slice(0, 16)
         : "",
-      pesos:
-        prev.pesos && prev.pesos.length > 0
-          ? Array.from({ length: 48 }, (_, i) => ({
-              pesoBruto: prev.pesos[i]?.pesoBruto ? String(prev.pesos[i].pesoBruto) : "",
-              pesoTara: prev.pesos[i]?.pesoTara !== undefined && prev.pesos[i]?.pesoTara !== null ? String(prev.pesos[i].pesoTara) : "",
-              pesoNeto: Number(prev.pesos[i]?.pesoNeto) || 0,
-            }))
-          : curr.pesos,
-      pesoNetoTotalTabletas: Number(prev.pesoNetoTotalTabletas) || curr.pesoNetoTotalTabletas || 0,
+      pesos: Array.from({ length: 48 }, () => ({
+        pesoBruto: "",
+        pesoTara: "",
+        pesoNeto: 0,
+      })),
+      pesoNetoTotalTabletas: 0,
     }));
   }
 
@@ -683,7 +680,7 @@ export default function NuevoRegistroWizard() {
                   Modo Edición de Plantilla Activo
                 </p>
                 <span className="px-2 py-0.5 rounded-full bg-blue-200/80 text-blue-900 font-bold text-[10px] tracking-wide">
-                  Marco azul iluminado = Campo no modificado
+                  Marco azul iluminado = Dato exactamente igual al registro anterior
                 </span>
               </div>
               <p className="text-blue-900 leading-relaxed">
@@ -692,7 +689,7 @@ export default function NuevoRegistroWizard() {
               <div className="flex items-start gap-2 pt-1 text-[11px] text-blue-800">
                 <span className="inline-block w-3 h-3 rounded-xs border-2 border-blue-500 bg-blue-200 shrink-0 shadow-[0_0_6px_rgba(59,130,246,0.6)] mt-0.5" />
                 <span>
-                  <strong>Indicación para el usuario:</strong> Las casillas que muestran un marco azul iluminado no han cambiado respecto al registro anterior. Por favor revisa cada campo antes de confirmar.
+                  <strong>Indicación para el usuario:</strong> Las casillas que muestran un marco azul iluminado contienen un dato exactamente igual al registro anterior. Por favor revisa cada campo antes de confirmar.
                 </span>
               </div>
             </div>
@@ -866,7 +863,7 @@ export default function NuevoRegistroWizard() {
               {isUnmodifiedField("ordenGranel") && (
                 <p className="mt-1.5 text-xs text-blue-700 font-semibold flex items-center gap-1.5 animate-in fade-in">
                   <span className="inline-block w-2 h-2 rounded-full bg-blue-500 animate-pulse" />
-                  <span>Campo idéntico al registro anterior. Modifícalo si este lote corresponde a una nueva orden.</span>
+                  <span>Dato exactamente igual al registro anterior. Modifícalo si este lote corresponde a una nueva orden.</span>
                 </p>
               )}
               {ordenError && (

@@ -74,43 +74,41 @@ export default function SeHistorialPage() {
           description="Consulta cronológica completa y examinación de parámetros por orden."
         />
 
-        {/* Barra de Búsqueda sin filtros avanzados */}
-        <div className="bg-white p-5 rounded-xl border border-slate-200 shadow-xs">
-          <div className="flex flex-wrap items-center justify-between gap-3">
-            <div className="flex-1 min-w-[260px] max-w-md flex items-center bg-white border border-slate-300 rounded-lg px-3 py-2 focus-within:ring-2 focus-within:ring-blue-500 focus-within:border-blue-500 transition shadow-2xs">
-              <span className="text-slate-400 shrink-0 mr-2.5 flex items-center justify-center pointer-events-none">
-                <Icon name="search" size={15} />
-              </span>
-              <input
-                type="text"
-                value={searchTerm}
-                onChange={(e) => {
-                  setSearchTerm(e.target.value);
-                  setCurrentPage(1);
-                }}
-                placeholder="Buscar por número de orden o lote..."
-                className="w-full text-xs font-medium focus:outline-none bg-transparent text-slate-800 placeholder-slate-400 border-none p-0"
-              />
-              {searchTerm && (
-                <button
-                  type="button"
-                  onClick={limpiarFiltros}
-                  className="text-slate-400 hover:text-slate-600 text-xs shrink-0 ml-2 transition"
-                  title="Limpiar búsqueda"
-                >
-                  ✕
-                </button>
-              )}
-            </div>
-
-            <Link
-              href="/se/nuevo"
-              className="py-2 px-4 rounded-lg bg-[#0d6efd] hover:bg-[#0b5ed7] text-white text-xs font-bold transition flex items-center gap-1.5 shadow-xs"
-            >
-              <Icon name="plus" size={14} />
-              <span>Nuevo Registro</span>
-            </Link>
+        {/* Barra de Búsqueda y Acción (sin recuadro contenedor externo) */}
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div className="flex-1 min-w-[280px] max-w-md flex items-center bg-white border border-slate-300 rounded-xl px-3.5 py-2.5 focus-within:ring-2 focus-within:ring-blue-500 focus-within:border-blue-500 transition shadow-xs">
+            <span className="text-slate-400 shrink-0 mr-2.5 flex items-center justify-center pointer-events-none">
+              <Icon name="search" size={16} />
+            </span>
+            <input
+              type="text"
+              value={searchTerm}
+              onChange={(e) => {
+                setSearchTerm(e.target.value);
+                setCurrentPage(1);
+              }}
+              placeholder="Buscar por número de orden o lote..."
+              className="w-full text-sm font-medium focus:outline-none bg-transparent text-slate-800 placeholder-slate-400 border-none p-0"
+            />
+            {searchTerm && (
+              <button
+                type="button"
+                onClick={limpiarFiltros}
+                className="text-slate-400 hover:text-slate-600 text-xs shrink-0 ml-2 transition cursor-pointer"
+                title="Limpiar búsqueda"
+              >
+                ✕
+              </button>
+            )}
           </div>
+
+          <Link
+            href="/se/nuevo"
+            className="py-2.5 px-4 rounded-xl bg-[#0d6efd] hover:bg-[#0b5ed7] text-white text-xs font-bold transition flex items-center gap-1.5 shadow-xs"
+          >
+            <Icon name="plus" size={14} />
+            <span>Nuevo Registro</span>
+          </Link>
         </div>
 
         {/* Tabla de Resultados */}
@@ -215,9 +213,8 @@ export default function SeHistorialPage() {
                           {/* Botón Examinar */}
                           <Link
                             href={`/se/${encodeURIComponent(item.ordenGranel)}`}
-                            className="inline-flex items-center gap-1.5 py-1 px-3 rounded-md bg-[#0d6efd] hover:bg-[#0b5ed7] text-white text-xs font-bold transition shadow-xs"
+                            className="inline-flex items-center justify-center py-1.5 px-3 rounded-md bg-[#0d6efd] hover:bg-[#0b5ed7] text-white text-xs font-bold transition shadow-xs"
                           >
-                            <Icon name="search" size={13} />
                             <span>Examinar</span>
                           </Link>
                         </td>

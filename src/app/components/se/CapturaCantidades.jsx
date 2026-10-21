@@ -2,6 +2,7 @@
 
 import { useState, useMemo } from "react";
 import Icon from "../ui/Icon";
+import AppErrorModal from "../ui/AppErrorModal";
 
 const PAGE_SIZE = 12;
 const TOTAL_ROWS = 48;
@@ -22,6 +23,7 @@ export default function CapturaCantidades({
   errors = {},
 }) {
   const [currentPage, setCurrentPage] = useState(1);
+  const [showResetConfirm, setShowResetConfirm] = useState(false);
 
   // Asegurar que existan exactamente 48 filas para la captura o mapeo uniforme (tara vacía por default para exigir captura manual, visualmente placeholder 0)
   const fullPesos = useMemo(() => {
@@ -206,11 +208,10 @@ export default function CapturaCantidades({
   // Borrar todas las cantidades registradas (pesadas 1 a 48)
   function handleBorrarTodasLasCantidades() {
     if (readOnly || !onChangePesos) return;
-    const confirmClear = window.confirm(
-      "¿Deseas borrar todas las cantidades registradas? Esto reiniciará las 48 pesadas a cero."
-    );
-    if (!confirmClear) return;
+    setShowResetConfirm(true);
+  }
 
+  function handleConfirmReset() {
     const reset = Array.from({ length: TOTAL_ROWS }, () => ({
       pesoBruto: "",
       pesoTara: "",
@@ -472,6 +473,17 @@ export default function CapturaCantidades({
           </span>
         </div>
       </div>
+
+      <AppErrorModal
+        isOpen={showResetConfirm}
+        onClose={() => setShowResetConfirm(false)}
+        title="Confirmar reinicio de cantidades"
+        message="¿Deseas borrar todas las cantidades registradas? Esto reiniciará las 48 pesadas a cero."
+        actionText="Sí, borrar todo"
+        cancelText="Cancelar"
+        type="warning"
+        onConfirm={handleConfirmReset}
+      />
     </div>
   );
 }

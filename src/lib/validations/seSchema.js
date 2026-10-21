@@ -55,9 +55,11 @@ export const registroSESchema = z.object({
     .optional(),
   cantPzasCargarSap: z.coerce
     .number({ invalid_type_error: "La cantidad de piezas a cargar SAP debe ser un número." })
+    .int("La cantidad de piezas a cargar SAP debe ser un número entero.")
     .nonnegative("No puede ser negativo."),
   cantPzasAcondicionar: z.coerce
     .number({ invalid_type_error: "La cantidad de piezas a acondicionar debe ser un número." })
+    .int("La cantidad de piezas a acondicionar debe ser un número entero.")
     .nonnegative("No puede ser negativo."),
   muestrasTabRecub: z.coerce
     .number({ invalid_type_error: "Las muestras deben ser un número." })
@@ -70,15 +72,30 @@ export const registroSESchema = z.object({
     .trim()
     .min(1, "El CTEC Granel SAP es obligatorio."),
   fechaInicioTableteado: z.coerce
-    .date({ invalid_type_error: "Fecha de inicio tableteado inválida." }),
+    .date({ invalid_type_error: "Fecha de inicio tableteado inválida." })
+    .refine((d) => d <= new Date(Date.now() + 60 * 1000), {
+      message: "No es posible registrar un día que aún no ha ocurrido.",
+    }),
   fechaFinTableteado: z.coerce
-    .date({ invalid_type_error: "Fecha fin tableteado inválida." }),
+    .date({ invalid_type_error: "Fecha fin tableteado inválida." })
+    .refine((d) => d <= new Date(Date.now() + 60 * 1000), {
+      message: "No es posible registrar un día que aún no ha ocurrido.",
+    }),
   fechaInicioRecubrimiento: z.coerce
-    .date({ invalid_type_error: "Fecha inicio recubrimiento inválida." }),
+    .date({ invalid_type_error: "Fecha inicio recubrimiento inválida." })
+    .refine((d) => d <= new Date(Date.now() + 60 * 1000), {
+      message: "No es posible registrar un día que aún no ha ocurrido.",
+    }),
   fechaFinPrimeraCarga: z.coerce
-    .date({ invalid_type_error: "Fecha fin primera carga inválida." }),
+    .date({ invalid_type_error: "Fecha fin primera carga inválida." })
+    .refine((d) => d <= new Date(Date.now() + 60 * 1000), {
+      message: "No es posible registrar un día que aún no ha ocurrido.",
+    }),
   fechaFinRecubrimiento: z.coerce
-    .date({ invalid_type_error: "Fecha fin recubrimiento inválida." }),
+    .date({ invalid_type_error: "Fecha fin recubrimiento inválida." })
+    .refine((d) => d <= new Date(Date.now() + 60 * 1000), {
+      message: "No es posible registrar un día que aún no ha ocurrido.",
+    }),
   pesos: z
     .array(pesoSESchema, { required_error: "Debe ingresar pesadas." })
     .min(1, "Debe registrar al menos una pesada.")

@@ -8,7 +8,7 @@ import PesosModal from "./PesosModal";
 import AuditTrailModal from "./AuditTrailModal";
 import AuditTrailSection from "./AuditTrailSection";
 import Icon from "../ui/Icon";
-import { formatDateTime } from "../../lib/dateFormat";
+import { formatDateTime, formatFriendlyDateTime } from "../../lib/dateFormat";
 
 /**
  * SEDetailView: Pantalla "Examinar - Historial" (Figma 125:76)
@@ -247,23 +247,28 @@ export default function SEDetailView({
 
   const canEdit = !isPTView && (userRole === "USER_SE" || userRole === "ADMIN");
 
+  function handleOpenAuditModal() {
+    setErrorMsg("");
+    const now = new Date();
+    const timeKeys = [
+      "fechaInicioTableteado",
+      "fechaFinTableteado",
+      "fechaInicioRecubrimiento",
+      "fechaFinPrimeraCarga",
+      "fechaFinRecubrimiento",
+    ];
+    for (const key of timeKeys) {
+      if (formValues[key] && new Date(formValues[key]) > now) {
+        setErrorMsg("No es posible registrar un día que aún no ha ocurrido en los tiempos de fabricación.");
+        return;
+      }
+    }
+    setShowAuditModal(true);
+  }
+
   // Formato amigable de fecha de creación: "Registrado el: 07 sep 2026, 09:45 hrs"
   const formattedCreationDate = useMemo(() => {
-    if (!registro.fechaCreacion) return "";
-    try {
-      const d = new Date(registro.fechaCreacion);
-      const opciones = {
-        day: "2-digit",
-        month: "short",
-        year: "numeric",
-        hour: "2-digit",
-        minute: "2-digit",
-        hour12: false,
-      };
-      return d.toLocaleDateString("es-MX", opciones) + " hrs";
-    } catch {
-      return formatDateTime(registro.fechaCreacion);
-    }
+    return formatFriendlyDateTime(registro.fechaCreacion);
   }, [registro.fechaCreacion]);
 
   return (
@@ -357,7 +362,7 @@ export default function SEDetailView({
                   </button>
                   <button
                     type="button"
-                    onClick={() => setShowAuditModal(true)}
+                    onClick={handleOpenAuditModal}
                     className="py-1.5 px-4 rounded-lg bg-amber-500 hover:bg-amber-600 text-white text-xs font-bold shadow-xs transition"
                   >
                     Guardar Cambios

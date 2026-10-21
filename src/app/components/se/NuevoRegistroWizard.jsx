@@ -6,6 +6,7 @@ import Link from "next/link";
 import CapturaCantidades from "./CapturaCantidades";
 import DatosGeneralesSE from "./DatosGeneralesSE";
 import Icon from "../ui/Icon";
+import AppErrorModal from "../ui/AppErrorModal";
 
 const DRAFT_STORAGE_KEY = "se_form_draft";
 const DRAFT_SESSION_KEY = "se_draft_session_active";
@@ -62,6 +63,17 @@ export default function NuevoRegistroWizard() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [apiError, setApiError] = useState("");
 
+  // Modal nativo de validación / error
+  const [errorModal, setErrorModal] = useState({ isOpen: false, title: "", message: "" });
+
+  function showError(message, title = "Validación requerida") {
+    setErrorModal({
+      isOpen: true,
+      title,
+      message,
+    });
+  }
+
   // Notificar cambio de borrador para Sidebar
   const notifyDraftUpdate = useCallback(() => {
     if (typeof window !== "undefined") {
@@ -96,15 +108,15 @@ export default function NuevoRegistroWizard() {
     let rend = "";
 
     if (pesoNeto > 0 && pesoProm > 0) {
-      // 9. CANT. PZAS A CARGAR EN SAP = Math.floor((PESO NETO TOTAL * 1000) / PESO PROMEDIO)
-      // Se redondea hacia abajo a entero, sin decimales
-      const piezas = Math.floor((pesoNeto * 1000) / pesoProm);
+      // 9. CANT. PZAS A CARGAR EN SAP = Math.round((PESO NETO TOTAL * 1000) / PESO PROMEDIO)
+      // Redondeo de producto entero: < 0.5 hacia abajo, >= 0.5 hacia arriba
+      const piezas = Math.round((pesoNeto * 1000) / pesoProm);
       cantSap = piezas;
 
-      // 10. CANT. PZAS A ACONDICIONAR = Math.floor(CANT. PZAS A CARGAR EN SAP / CANT DE TAB. POR PZA)
-      // Se redondea hacia abajo a entero, sin decimales
+      // 10. CANT. PZAS A ACONDICIONAR = Math.round(CANT. PZAS A CARGAR EN SAP / CANT DE TAB. POR PZA)
+      // Redondeo de producto entero: < 0.5 hacia abajo, >= 0.5 hacia arriba
       if (cantTabPorPza > 0) {
-        cantAcond = Math.floor(piezas / cantTabPorPza);
+        cantAcond = Math.round(piezas / cantTabPorPza);
       }
 
       // 11 y 10. RENDIMIENTO TAB = ((PESO NETO TOTAL / PESO PROMEDIO) / TAMAÑO DEL LOTE ESTANDAR)
@@ -407,27 +419,27 @@ export default function NuevoRegistroWizard() {
       .filter((p) => p.pesoBruto !== "" && !isNaN(Number(p.pesoBruto)) && Number(p.pesoBruto) > 0);
 
     if (pesadasConBruto.length === 0) {
-      alert("Debes capturar al menos 1 pesada válida (con Peso Bruto mayor a 0) para continuar.");
+      showError("Debes capturar al menos 1 pesada válida (con Peso Bruto mayor a 0) para avanzar a Datos técnicos.");
       return false;
     }
 
-    // Punto 7 y 8: No dejar continuar si un peso bruto no tiene registrado su peso tara manualmente o si tara > bruto o < 0
+    // Validación de peso tara
     for (const p of pesadasConBruto) {
       if (p.pesoTara === "" || p.pesoTara === null || p.pesoTara === undefined) {
-        alert(
-          `La pesada #${p.originalIndex} tiene un peso bruto capturado (${p.pesoBruto} kg) pero no tiene peso tara registrado.\n\nDebes ingresar manualmente la tara en esa casilla (ingresa 0 si no aplica tara).`
+        showError(
+          `El registro #${p.originalIndex} con peso bruto [${p.pesoBruto} kg] no tiene un peso tara registrado, para avanzar a Datos técnicos ingrese el peso tara en el registro #${p.originalIndex}`
         );
         return false;
       }
       const numTara = Number(p.pesoTara);
       const numBruto = Number(p.pesoBruto);
       if (isNaN(numTara) || numTara < 0) {
-        alert(`La pesada #${p.originalIndex} tiene un valor de tara inválido o negativo.`);
+        showError(`El registro #${p.originalIndex} tiene un valor de peso tara inválido o negativo.`);
         return false;
       }
       if (numTara > numBruto) {
-        alert(
-          `La pesada #${p.originalIndex} tiene un peso tara (${numTara} kg) mayor a su peso bruto (${numBruto} kg).\n\nEl peso tara no puede ser mayor al peso bruto.`
+        showError(
+          `El registro #${p.originalIndex} tiene un peso tara (${numTara} kg) mayor a su peso bruto (${numBruto} kg). El peso tara no puede ser mayor al peso bruto.`
         );
         return false;
       }
@@ -492,15 +504,35 @@ export default function NuevoRegistroWizard() {
     if (!values.pesoPromedio) errors.pesoPromedio = "El peso promedio es obligatorio.";
     if (!values.rendimientoTab) errors.rendimientoTab = "El rendimiento es obligatorio.";
     if (!values.ctecGranelSap?.trim()) errors.ctecGranelSap = "El CTEC Granel SAP es obligatorio.";
-    if (!values.fechaInicioTableteado) errors.fechaInicioTableteado = "Requerido.";
-    if (!values.fechaFinTableteado) errors.fechaFinTableteado = "Requerido.";
-    if (!values.fechaInicioRecubrimiento) errors.fechaInicioRecubrimiento = "Requerido.";
-    if (!values.fechaFinPrimeraCarga) errors.fechaFinPrimeraCarga = "Requerido.";
-    if (!values.fechaFinRecubrimiento) errors.fechaFinRecubrimiento = "Requerido.";
+
+    // Validación de tiempos de fabricación y no permitir fechas futuras
+    const now = new Date();
+    const timeFields = [
+      { key: "fechaInicioTableteado", label: "Inicio Tableteado" },
+      { key: "fechaFinTableteado", label: "Fin Tableteado" },
+      { key: "fechaInicioRecubrimiento", label: "Inicio Recubrimiento" },
+      { key: "fechaFinPrimeraCarga", label: "Fin 1era Carga" },
+      { key: "fechaFinRecubrimiento", label: "Fin Recubrimiento" },
+    ];
+
+    for (const tf of timeFields) {
+      if (!values[tf.key]) {
+        errors[tf.key] = "Requerido.";
+      } else if (new Date(values[tf.key]) > now) {
+        errors[tf.key] = "No es posible registrar un día que aún no ha ocurrido.";
+      }
+    }
 
     if (Object.keys(errors).length > 0) {
       setFormErrors(errors);
-      setApiError("Por favor completa los campos técnicos obligatorios.");
+      const futureError = Object.values(errors).find((msg) =>
+        msg.includes("aún no ha ocurrido")
+      );
+      if (futureError) {
+        showError("No es posible registrar un día que aún no ha ocurrido en los tiempos de fabricación.");
+      } else {
+        setApiError("Por favor completa los campos técnicos obligatorios.");
+      }
       return;
     }
 
@@ -510,7 +542,7 @@ export default function NuevoRegistroWizard() {
     );
 
     if (pesadasCapturadas.length === 0) {
-      setApiError("Debe haber al menos una pesada capturada.");
+      showError("Debe haber al menos una pesada capturada con peso bruto mayor a 0.");
       return;
     }
 
@@ -1098,6 +1130,14 @@ export default function NuevoRegistroWizard() {
           </div>
         </div>
       )}
+
+      {/* Modal Nativo de Notificación de Error / Validación */}
+      <AppErrorModal
+        isOpen={errorModal.isOpen}
+        onClose={() => setErrorModal({ ...errorModal, isOpen: false })}
+        title={errorModal.title}
+        message={errorModal.message}
+      />
     </div>
   );
 }

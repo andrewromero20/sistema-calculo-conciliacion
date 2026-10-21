@@ -1,7 +1,9 @@
 "use client";
 
 import AutocompleteInput from "./AutocompleteInput";
-import { formatThousands } from "@/lib/numberFormat";
+import FormattedNumberInput from "./FormattedNumberInput";
+import { formatThousands, formatInteger, formatDecimal } from "@/lib/numberFormat";
+import { formatDateTime } from "@/app/lib/dateFormat";
 
 const PRODUCTOS_SUGERIDOS = [
   "Paracetamol 500mg Granel Tableteado",
@@ -53,6 +55,19 @@ function preventNegativeInput(e) {
   }
 }
 
+/**
+ * Fecha y hora máxima permitida (momento actual) para no permitir fechas futuras
+ */
+function getMaxDateTime() {
+  const now = new Date();
+  const year = now.getFullYear();
+  const month = String(now.getMonth() + 1).padStart(2, "0");
+  const day = String(now.getDate()).padStart(2, "0");
+  const hours = String(now.getHours()).padStart(2, "0");
+  const minutes = String(now.getMinutes()).padStart(2, "0");
+  return `${year}-${month}-${day}T${hours}:${minutes}`;
+}
+
 export default function DatosGeneralesSE({
   values,
   onChangeField,
@@ -66,13 +81,10 @@ export default function DatosGeneralesSE({
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-5 items-start">
         {/* Columna Izquierda: Identificación del Lote y Personal */}
         <div className="bg-white p-5 rounded-xl border border-slate-200 shadow-xs space-y-4">
-          <div className="border-b border-slate-100 pb-2.5">
+          <div className="border-b border-slate-100 pb-2">
             <h3 className="text-xs font-bold text-slate-800 uppercase tracking-wider">
               1. Identificación del Lote y Personal
             </h3>
-            <p className="text-[11px] text-slate-500 mt-0.5">
-              Supervisión de proceso, especificaciones de material y orden de granel.
-            </p>
           </div>
 
           <div className="space-y-3.5">
@@ -200,20 +212,14 @@ export default function DatosGeneralesSE({
                 >
                   Tamaño Lote Estándar (kg) <span className="text-red-500">*</span>
                 </label>
-                <input
+                <FormattedNumberInput
                   id="tamanoLoteEstandar"
-                  type="number"
-                  min="0"
-                  step="0.01"
+                  isDecimal={true}
                   value={values.tamanoLoteEstandar ?? ""}
                   onKeyDown={preventNegativeInput}
-                  onChange={(e) => {
-                    const val = e.target.value;
-                    if (val === "" || (!val.includes("-") && Number(val) >= 0)) {
-                      onChangeField("tamanoLoteEstandar", val);
-                    }
-                  }}
+                  onChange={(val) => onChangeField("tamanoLoteEstandar", val)}
                   disabled={readOnly}
+                  readOnly={readOnly}
                   placeholder="250.0"
                   className={`w-full px-3 py-2 text-xs border rounded-lg transition font-mono ${getGlowBorderClass(
                     isUnmodifiedField("tamanoLoteEstandar"),
@@ -270,17 +276,14 @@ export default function DatosGeneralesSE({
 
         {/* Columna Derecha: Parámetros Técnicos y Rendimiento */}
         <div className="bg-white p-5 rounded-xl border border-slate-200 shadow-xs space-y-4">
-          <div className="border-b border-slate-100 pb-2.5">
+          <div className="border-b border-slate-100 pb-2">
             <h3 className="text-xs font-bold text-slate-800 uppercase tracking-wider">
               2. Parámetros de Tableteado y Rendimiento
             </h3>
-            <p className="text-[11px] text-slate-500 mt-0.5">
-              Valores computados, masa total de pesadas y balance analítico.
-            </p>
           </div>
 
           <div className="space-y-3.5">
-            {/* Grid 1: Peso Neto Total Tabletas (izq) y Cant. de Tab. por Pza. (der) - Punto 3 */}
+            {/* Grid 1: Peso Neto Total Tabletas (izq) y Cant. de Tab. por Pza. (der) */}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5 items-end">
               <div>
                 <label
@@ -294,7 +297,7 @@ export default function DatosGeneralesSE({
                   type="text"
                   value={
                     values.pesoNetoTotalTabletas !== undefined && values.pesoNetoTotalTabletas !== ""
-                      ? formatThousands(values.pesoNetoTotalTabletas, 2)
+                      ? formatDecimal(values.pesoNetoTotalTabletas, 2)
                       : "0.00"
                   }
                   disabled={true}
@@ -307,7 +310,7 @@ export default function DatosGeneralesSE({
                 </span>
               </div>
 
-              {/* Cant. de Tab. por Pza. (Punto 3: Resaltado con color llamativo y estética PiSA) */}
+              {/* Cant. de Tab. por Pza. */}
               <div className="p-2.5 bg-blue-50/90 border-2 border-blue-400 rounded-xl shadow-xs transition hover:border-blue-500">
                 <div className="flex items-center justify-between mb-1">
                   <label
@@ -320,20 +323,14 @@ export default function DatosGeneralesSE({
                     ★ Parámetro clave
                   </span>
                 </div>
-                <input
+                <FormattedNumberInput
                   id="cantTabPorPza"
-                  type="number"
-                  min="1"
-                  step="1"
+                  isDecimal={false}
                   value={values.cantTabPorPza ?? "1"}
                   onKeyDown={preventNegativeInput}
-                  onChange={(e) => {
-                    const val = e.target.value;
-                    if (val === "" || (!val.includes("-") && Number(val) >= 0)) {
-                      onChangeField("cantTabPorPza", val);
-                    }
-                  }}
+                  onChange={(val) => onChangeField("cantTabPorPza", val)}
                   disabled={readOnly}
+                  readOnly={readOnly}
                   placeholder="1"
                   className={`w-full px-3 py-1.5 text-xs font-mono font-bold rounded-lg transition ${
                     isUnmodifiedField("cantTabPorPza")
@@ -352,7 +349,7 @@ export default function DatosGeneralesSE({
               </div>
             </div>
 
-            {/* Grid 2: Peso Promedio (izq) y Muestras Tab / Recub (der) - Punto 3 */}
+            {/* Grid 2: Peso Promedio (izq) y Muestras Tab / Recub (der) */}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
               <div>
                 <label
@@ -361,20 +358,14 @@ export default function DatosGeneralesSE({
                 >
                   Peso Promedio (g) <span className="text-red-500">*</span>
                 </label>
-                <input
+                <FormattedNumberInput
                   id="pesoPromedio"
-                  type="number"
-                  min="0"
-                  step="0.001"
+                  isDecimal={true}
                   value={values.pesoPromedio ?? ""}
                   onKeyDown={preventNegativeInput}
-                  onChange={(e) => {
-                    const val = e.target.value;
-                    if (val === "" || (!val.includes("-") && Number(val) >= 0)) {
-                      onChangeField("pesoPromedio", val);
-                    }
-                  }}
+                  onChange={(val) => onChangeField("pesoPromedio", val)}
                   disabled={readOnly}
+                  readOnly={readOnly}
                   placeholder="0.520"
                   className={`w-full px-3 py-2 text-xs border rounded-lg transition font-mono ${getGlowBorderClass(
                     isUnmodifiedField("pesoPromedio"),
@@ -401,20 +392,14 @@ export default function DatosGeneralesSE({
                 >
                   Muestras Tab / Recub <span className="text-red-500">*</span>
                 </label>
-                <input
+                <FormattedNumberInput
                   id="muestrasTabRecub"
-                  type="number"
-                  min="0"
-                  step="1"
+                  isDecimal={false}
                   value={values.muestrasTabRecub ?? ""}
                   onKeyDown={preventNegativeInput}
-                  onChange={(e) => {
-                    const val = e.target.value;
-                    if (val === "" || (!val.includes("-") && Number(val) >= 0)) {
-                      onChangeField("muestrasTabRecub", val);
-                    }
-                  }}
+                  onChange={(val) => onChangeField("muestrasTabRecub", val)}
                   disabled={readOnly}
+                  readOnly={readOnly}
                   placeholder="500"
                   className={`w-full px-3 py-2 text-xs border rounded-lg transition font-mono ${getGlowBorderClass(
                     isUnmodifiedField("muestrasTabRecub"),
@@ -435,7 +420,7 @@ export default function DatosGeneralesSE({
               </div>
             </div>
 
-            {/* Grid 3: Cant. Pzas a Cargar SAP y Cant. Pzas a Acondicionar (Punto 9: redondeo hacia abajo y formato con comas) */}
+            {/* Grid 3: Cant. Pzas a Cargar SAP y Cant. Pzas a Acondicionar (Redondeo entero y miles con coma) */}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
               <div>
                 <label
@@ -449,13 +434,13 @@ export default function DatosGeneralesSE({
                   type="text"
                   value={
                     values.cantPzasCargarSap !== "" && values.cantPzasCargarSap !== undefined
-                      ? formatThousands(values.cantPzasCargarSap, 0)
+                      ? formatInteger(values.cantPzasCargarSap)
                       : ""
                   }
                   disabled={true}
                   readOnly={true}
                   placeholder="Calculado automáticamente"
-                  title="Calculado automáticamente: Math.floor((Peso Neto Total * 1000) / Peso Promedio)"
+                  title="Calculado automáticamente: Math.round((Peso Neto Total * 1000) / Peso Promedio)"
                   className="w-full px-3 py-2 text-xs border border-slate-200 bg-slate-100 text-slate-700 font-mono font-bold rounded-lg cursor-not-allowed select-none"
                 />
                 <span className="text-[10px] text-slate-400 mt-0.5 block">
@@ -480,13 +465,13 @@ export default function DatosGeneralesSE({
                   type="text"
                   value={
                     values.cantPzasAcondicionar !== "" && values.cantPzasAcondicionar !== undefined
-                      ? formatThousands(values.cantPzasAcondicionar, 0)
+                      ? formatInteger(values.cantPzasAcondicionar)
                       : ""
                   }
                   disabled={true}
                   readOnly={true}
                   placeholder="Calculado automáticamente"
-                  title="Calculado automáticamente: Math.floor(Cant. Pzas SAP / Cant. Tab por Pza.)"
+                  title="Calculado automáticamente: Math.round(Cant. Pzas SAP / Cant. Tab por Pza.)"
                   className="w-full px-3 py-2 text-xs border border-slate-200 bg-slate-100 text-slate-700 font-mono font-bold rounded-lg cursor-not-allowed select-none"
                 />
                 <span className="text-[10px] text-slate-400 mt-0.5 block">
@@ -576,13 +561,10 @@ export default function DatosGeneralesSE({
 
       {/* Fila Inferior: Tiempos de Fabricación (Tableteado y Recubrimiento) */}
       <div className="bg-white p-5 rounded-xl border border-slate-200 shadow-xs space-y-4">
-        <div className="border-b border-slate-100 pb-2.5">
+        <div className="border-b border-slate-100 pb-2">
           <h3 className="text-xs font-bold text-slate-800 uppercase tracking-wider">
             3. Tiempos de Fabricación (Tableteado y Recubrimiento)
           </h3>
-          <p className="text-[11px] text-slate-500 mt-0.5">
-            Registro cronológico de inicio, fin de tableteado y etapas de recubrimiento.
-          </p>
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3.5">
@@ -593,18 +575,29 @@ export default function DatosGeneralesSE({
             >
               Inicio Tableteado <span className="text-red-500">*</span>
             </label>
-            <input
-              id="fechaInicioTableteado"
-              type="datetime-local"
-              value={values.fechaInicioTableteado || ""}
-              onChange={(e) => onChangeField("fechaInicioTableteado", e.target.value)}
-              disabled={readOnly}
-              className={`w-full px-2.5 py-1.5 text-xs border rounded-lg transition font-mono ${getGlowBorderClass(
-                isUnmodifiedField("fechaInicioTableteado"),
-                Boolean(errors.fechaInicioTableteado),
+            {readOnly ? (
+              <input
+                type="text"
                 readOnly
-              )}`}
-            />
+                disabled
+                value={values.fechaInicioTableteado ? formatDateTime(values.fechaInicioTableteado) : "-"}
+                className="w-full px-2.5 py-1.5 text-xs border rounded-lg bg-slate-100 text-slate-700 font-mono cursor-not-allowed select-none"
+              />
+            ) : (
+              <input
+                id="fechaInicioTableteado"
+                type="datetime-local"
+                max={getMaxDateTime()}
+                value={values.fechaInicioTableteado || ""}
+                onChange={(e) => onChangeField("fechaInicioTableteado", e.target.value)}
+                disabled={readOnly}
+                className={`w-full px-2.5 py-1.5 text-xs border rounded-lg transition font-mono ${getGlowBorderClass(
+                  isUnmodifiedField("fechaInicioTableteado"),
+                  Boolean(errors.fechaInicioTableteado),
+                  readOnly
+                )}`}
+              />
+            )}
             {isUnmodifiedField("fechaInicioTableteado") && !errors.fechaInicioTableteado && (
               <span className="text-[10px] text-blue-600 font-semibold mt-0.5 block">
                 Dato exactamente igual al registro anterior
@@ -624,18 +617,29 @@ export default function DatosGeneralesSE({
             >
               Fin Tableteado <span className="text-red-500">*</span>
             </label>
-            <input
-              id="fechaFinTableteado"
-              type="datetime-local"
-              value={values.fechaFinTableteado || ""}
-              onChange={(e) => onChangeField("fechaFinTableteado", e.target.value)}
-              disabled={readOnly}
-              className={`w-full px-2.5 py-1.5 text-xs border rounded-lg transition font-mono ${getGlowBorderClass(
-                isUnmodifiedField("fechaFinTableteado"),
-                Boolean(errors.fechaFinTableteado),
+            {readOnly ? (
+              <input
+                type="text"
                 readOnly
-              )}`}
-            />
+                disabled
+                value={values.fechaFinTableteado ? formatDateTime(values.fechaFinTableteado) : "-"}
+                className="w-full px-2.5 py-1.5 text-xs border rounded-lg bg-slate-100 text-slate-700 font-mono cursor-not-allowed select-none"
+              />
+            ) : (
+              <input
+                id="fechaFinTableteado"
+                type="datetime-local"
+                max={getMaxDateTime()}
+                value={values.fechaFinTableteado || ""}
+                onChange={(e) => onChangeField("fechaFinTableteado", e.target.value)}
+                disabled={readOnly}
+                className={`w-full px-2.5 py-1.5 text-xs border rounded-lg transition font-mono ${getGlowBorderClass(
+                  isUnmodifiedField("fechaFinTableteado"),
+                  Boolean(errors.fechaFinTableteado),
+                  readOnly
+                )}`}
+              />
+            )}
             {isUnmodifiedField("fechaFinTableteado") && !errors.fechaFinTableteado && (
               <span className="text-[10px] text-blue-600 font-semibold mt-0.5 block">
                 Dato exactamente igual al registro anterior
@@ -655,18 +659,29 @@ export default function DatosGeneralesSE({
             >
               Inicio Recubrimiento <span className="text-red-500">*</span>
             </label>
-            <input
-              id="fechaInicioRecubrimiento"
-              type="datetime-local"
-              value={values.fechaInicioRecubrimiento || ""}
-              onChange={(e) => onChangeField("fechaInicioRecubrimiento", e.target.value)}
-              disabled={readOnly}
-              className={`w-full px-2.5 py-1.5 text-xs border rounded-lg transition font-mono ${getGlowBorderClass(
-                isUnmodifiedField("fechaInicioRecubrimiento"),
-                Boolean(errors.fechaInicioRecubrimiento),
+            {readOnly ? (
+              <input
+                type="text"
                 readOnly
-              )}`}
-            />
+                disabled
+                value={values.fechaInicioRecubrimiento ? formatDateTime(values.fechaInicioRecubrimiento) : "-"}
+                className="w-full px-2.5 py-1.5 text-xs border rounded-lg bg-slate-100 text-slate-700 font-mono cursor-not-allowed select-none"
+              />
+            ) : (
+              <input
+                id="fechaInicioRecubrimiento"
+                type="datetime-local"
+                max={getMaxDateTime()}
+                value={values.fechaInicioRecubrimiento || ""}
+                onChange={(e) => onChangeField("fechaInicioRecubrimiento", e.target.value)}
+                disabled={readOnly}
+                className={`w-full px-2.5 py-1.5 text-xs border rounded-lg transition font-mono ${getGlowBorderClass(
+                  isUnmodifiedField("fechaInicioRecubrimiento"),
+                  Boolean(errors.fechaInicioRecubrimiento),
+                  readOnly
+                )}`}
+              />
+            )}
             {isUnmodifiedField("fechaInicioRecubrimiento") && !errors.fechaInicioRecubrimiento && (
               <span className="text-[10px] text-blue-600 font-semibold mt-0.5 block">
                 Dato exactamente igual al registro anterior
@@ -686,18 +701,29 @@ export default function DatosGeneralesSE({
             >
               Fin 1era Carga <span className="text-red-500">*</span>
             </label>
-            <input
-              id="fechaFinPrimeraCarga"
-              type="datetime-local"
-              value={values.fechaFinPrimeraCarga || ""}
-              onChange={(e) => onChangeField("fechaFinPrimeraCarga", e.target.value)}
-              disabled={readOnly}
-              className={`w-full px-2.5 py-1.5 text-xs border rounded-lg transition font-mono ${getGlowBorderClass(
-                isUnmodifiedField("fechaFinPrimeraCarga"),
-                Boolean(errors.fechaFinPrimeraCarga),
+            {readOnly ? (
+              <input
+                type="text"
                 readOnly
-              )}`}
-            />
+                disabled
+                value={values.fechaFinPrimeraCarga ? formatDateTime(values.fechaFinPrimeraCarga) : "-"}
+                className="w-full px-2.5 py-1.5 text-xs border rounded-lg bg-slate-100 text-slate-700 font-mono cursor-not-allowed select-none"
+              />
+            ) : (
+              <input
+                id="fechaFinPrimeraCarga"
+                type="datetime-local"
+                max={getMaxDateTime()}
+                value={values.fechaFinPrimeraCarga || ""}
+                onChange={(e) => onChangeField("fechaFinPrimeraCarga", e.target.value)}
+                disabled={readOnly}
+                className={`w-full px-2.5 py-1.5 text-xs border rounded-lg transition font-mono ${getGlowBorderClass(
+                  isUnmodifiedField("fechaFinPrimeraCarga"),
+                  Boolean(errors.fechaFinPrimeraCarga),
+                  readOnly
+                )}`}
+              />
+            )}
             {isUnmodifiedField("fechaFinPrimeraCarga") && !errors.fechaFinPrimeraCarga && (
               <span className="text-[10px] text-blue-600 font-semibold mt-0.5 block">
                 Dato exactamente igual al registro anterior
@@ -717,18 +743,29 @@ export default function DatosGeneralesSE({
             >
               Fin Recubrimiento <span className="text-red-500">*</span>
             </label>
-            <input
-              id="fechaFinRecubrimiento"
-              type="datetime-local"
-              value={values.fechaFinRecubrimiento || ""}
-              onChange={(e) => onChangeField("fechaFinRecubrimiento", e.target.value)}
-              disabled={readOnly}
-              className={`w-full px-2.5 py-1.5 text-xs border rounded-lg transition font-mono ${getGlowBorderClass(
-                isUnmodifiedField("fechaFinRecubrimiento"),
-                Boolean(errors.fechaFinRecubrimiento),
+            {readOnly ? (
+              <input
+                type="text"
                 readOnly
-              )}`}
-            />
+                disabled
+                value={values.fechaFinRecubrimiento ? formatDateTime(values.fechaFinRecubrimiento) : "-"}
+                className="w-full px-2.5 py-1.5 text-xs border rounded-lg bg-slate-100 text-slate-700 font-mono cursor-not-allowed select-none"
+              />
+            ) : (
+              <input
+                id="fechaFinRecubrimiento"
+                type="datetime-local"
+                max={getMaxDateTime()}
+                value={values.fechaFinRecubrimiento || ""}
+                onChange={(e) => onChangeField("fechaFinRecubrimiento", e.target.value)}
+                disabled={readOnly}
+                className={`w-full px-2.5 py-1.5 text-xs border rounded-lg transition font-mono ${getGlowBorderClass(
+                  isUnmodifiedField("fechaFinRecubrimiento"),
+                  Boolean(errors.fechaFinRecubrimiento),
+                  readOnly
+                )}`}
+              />
+            )}
             {isUnmodifiedField("fechaFinRecubrimiento") && !errors.fechaFinRecubrimiento && (
               <span className="text-[10px] text-blue-600 font-semibold mt-0.5 block">
                 Dato exactamente igual al registro anterior

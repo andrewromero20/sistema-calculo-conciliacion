@@ -1689,7 +1689,9 @@ const [ materialMessages,setMaterialMessages,] = useState({});
                     className="matrix-material-column"
                   >
                     <strong>
-                      {material.descripcion}
+                      {material.descripcion === "TABLETA"
+                        ? "TABLETA / BLÍSTER"
+                        : material.descripcion}
                     </strong>
 
                     <small>

@@ -586,20 +586,21 @@ export async function PUT(request, { params }) {
         nextData.resultadoF,
       );
 
-      // G no aplica para FOIL PVC.
-      const resultadoG = null;
+      
+      const resultadoG = normalizeOptionalNumber(nextData.resultadoG);
 
       // H = E + F.
       const totalUtilizadaH = calcularTotalFoil(
         resultadoE,
         resultadoF,
+        resultadoG,
+
       );
 
       // Diferencia = D - E - F.
       const diferencia = calcularDiferenciaFoil(
         totalRecibidaD,
-        resultadoE,
-        resultadoF,
+        totalUtilizadaH,  
       );
 
       const porcentajeDiferencia =
@@ -614,6 +615,7 @@ export async function PUT(request, { params }) {
         resultadoF,
         totalUtilizadaH,
         diferencia,
+        resultadoG,
       ].some(
         (value) =>
           value === null ||
@@ -659,20 +661,19 @@ export async function PUT(request, { params }) {
         nextData.resultadoF,
       );
 
-      // G no aplica para FOIL ALUMINIO.
-      const resultadoG = null;
+      const resultadoG = normalizeOptionalNumber(nextData.resultadoG);
 
       // H = E + F.
       const totalUtilizadaH = calcularTotalFoil(
         resultadoE,
         resultadoF,
+        resultadoG,
       );
 
       // Diferencia = D - E - F.
       const diferencia = calcularDiferenciaFoil(
         totalRecibidaD,
-        resultadoE,
-        resultadoF,
+        totalUtilizadaH,
       );
 
       const faltanValores = [
@@ -681,6 +682,7 @@ export async function PUT(request, { params }) {
         resultadoF,
         totalUtilizadaH,
         diferencia,
+        resultadoG,
       ].some(
         (value) =>
           value === null ||

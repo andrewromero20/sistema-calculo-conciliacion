@@ -159,11 +159,13 @@ export function calcularFFoil(valor) {
 
 export function calcularTotalFoil(
   resultadoE,
-  resultadoF
+  resultadoF, 
+  resultadoG
 ) {
   if (
     isEmptyValue(resultadoE) ||
-    isEmptyValue(resultadoF)
+    isEmptyValue(resultadoF) ||
+    isEmptyValue(resultadoG)
   ) {
     return null;
   }
@@ -171,7 +173,8 @@ export function calcularTotalFoil(
   return Number(
     (
       toSafeNumber(resultadoE) +
-      toSafeNumber(resultadoF)
+      toSafeNumber(resultadoF) +
+      toSafeNumber(resultadoG)
     ).toFixed(3)
   );
 }

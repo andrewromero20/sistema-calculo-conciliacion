@@ -16,7 +16,6 @@ export async function crearMaterial(material) {
 
   return response.json();
 }
-
 export async function actualizarMaterial(id, material) {
   const response = await fetch(`/api/materiales/${id}`, {
     method: "PUT",
@@ -30,6 +29,7 @@ export async function actualizarMaterial(id, material) {
 
   return response.json();
 }
+
 
 export async function eliminarMaterial(id) {
   const response = await fetch(`/api/materiales/${id}`, { method: "DELETE" });

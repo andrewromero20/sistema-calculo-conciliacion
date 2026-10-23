@@ -91,7 +91,11 @@ export async function GET() {
 export async function POST(request) {
   const body = await request.json();
 
-  const requiredFields = ["descripcion", "codigoSAP", "unidadMedida", "conciliacionId"];
+  const requiredFields = [
+    "descripcion",
+    "unidadMedida",
+    "conciliacionId",
+  ];
   const missingFields = requiredFields.filter((field) => {
     const value = body[field];
 
@@ -117,7 +121,10 @@ export async function POST(request) {
   }
 
   const descripcion = String(body.descripcion).trim();
-  const codigoSAP = String(body.codigoSAP).trim();
+  const codigoSAP =
+    typeof body.codigoSAP === "string"
+      ? body.codigoSAP.trim()
+      : "";
   const unidadMedida = String(body.unidadMedida).trim();
   const conciliacionId = Number(body.conciliacionId);
 
@@ -128,10 +135,19 @@ export async function POST(request) {
     );
   }
 
-  if (!codigoSAP || codigoSAP.length < 3) {
+  if (
+    codigoSAP !== "" &&
+    codigoSAP.length < 3
+  ) {
     return Response.json(
-      { error: "El código SAP no tiene un formato válido.", campos: ["codigoSAP"] },
-      { status: 400 },
+      {
+        error:
+          "El código SAP no tiene un formato válido.",
+        campos: ["codigoSAP"],
+      },
+      {
+        status: 400,
+      },
     );
   }
 

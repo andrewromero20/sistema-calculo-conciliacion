@@ -28,7 +28,7 @@ export default function LoginPage() {
     },
     {
       label: "Administrador (ADMIN)",
-      desc: "Acceso total SE y PT",
+      desc: "Gestión de Usuarios y Roles",
       email: "admin@empresa.com",
       pass: "Admin123!",
       color: "bg-purple-50 text-purple-800 border-purple-200 hover:bg-purple-100",
@@ -63,7 +63,9 @@ export default function LoginPage() {
       }
 
       // Redirigir según rol
-      if (data.user.rol === "USER_SE") {
+      if (data.user.rol === "ADMIN") {
+        router.push("/admin");
+      } else if (data.user.rol === "USER_SE") {
         router.push("/se");
       } else {
         router.push("/pt");

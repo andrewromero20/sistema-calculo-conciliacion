@@ -74,10 +74,10 @@ export default function SeHistorialPage() {
           description="Consulta cronológica completa y examinación de parámetros por orden."
         />
 
-        {/* Barra de Búsqueda y Acción (sin recuadro contenedor externo) */}
+        {/* Barra de Búsqueda y Acción (Un solo recuadro con lupa y texto) */}
         <div className="flex flex-wrap items-center justify-between gap-3">
-          <div className="flex-1 min-w-[280px] max-w-md flex items-center bg-white border border-slate-300 rounded-xl px-3.5 py-2.5 focus-within:ring-2 focus-within:ring-blue-500 focus-within:border-blue-500 transition shadow-xs">
-            <span className="text-slate-400 shrink-0 mr-2.5 flex items-center justify-center pointer-events-none">
+          <div className="relative flex-1 min-w-[280px] max-w-md">
+            <span className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400 z-10">
               <Icon name="search" size={16} />
             </span>
             <input
@@ -88,13 +88,23 @@ export default function SeHistorialPage() {
                 setCurrentPage(1);
               }}
               placeholder="Buscar por número de orden o lote..."
-              className="w-full text-sm font-medium focus:outline-none bg-transparent text-slate-800 placeholder-slate-400 border-none p-0"
+              style={{
+                height: "42px",
+                paddingLeft: "38px",
+                paddingRight: searchTerm ? "38px" : "14px",
+                border: "1px solid #cbd5e1",
+                borderRadius: "12px",
+                backgroundColor: "#ffffff",
+                boxShadow: "0 1px 2px rgba(0, 0, 0, 0.05)",
+                fontSize: "13px",
+              }}
+              className="w-full text-slate-800 placeholder-slate-400 font-medium focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition"
             />
             {searchTerm && (
               <button
                 type="button"
                 onClick={limpiarFiltros}
-                className="text-slate-400 hover:text-slate-600 text-xs shrink-0 ml-2 transition cursor-pointer"
+                className="absolute inset-y-0 right-0 pr-3.5 flex items-center text-slate-400 hover:text-slate-600 text-xs transition cursor-pointer z-10"
                 title="Limpiar búsqueda"
               >
                 ✕

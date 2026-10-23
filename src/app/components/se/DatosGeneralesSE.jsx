@@ -2,6 +2,7 @@
 
 import AutocompleteInput from "./AutocompleteInput";
 import FormattedNumberInput from "./FormattedNumberInput";
+import DateTime24Input from "./DateTime24Input";
 import { formatThousands, formatInteger, formatDecimal } from "@/lib/numberFormat";
 import { formatDateTime } from "@/app/lib/dateFormat";
 
@@ -66,6 +67,14 @@ function getMaxDateTime() {
   const hours = String(now.getHours()).padStart(2, "0");
   const minutes = String(now.getMinutes()).padStart(2, "0");
   return `${year}-${month}-${day}T${hours}:${minutes}`;
+}
+
+function getMaxDateOnly() {
+  const now = new Date();
+  const year = now.getFullYear();
+  const month = String(now.getMonth() + 1).padStart(2, "0");
+  const day = String(now.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
 }
 
 export default function DatosGeneralesSE({
@@ -356,7 +365,7 @@ export default function DatosGeneralesSE({
                   htmlFor="pesoPromedio"
                   className="block text-[11px] font-bold text-slate-700 uppercase tracking-wider mb-1"
                 >
-                  Peso Promedio (g) <span className="text-red-500">*</span>
+                  Peso Promedio <span className="text-red-500">*</span>
                 </label>
                 <FormattedNumberInput
                   id="pesoPromedio"
@@ -440,7 +449,7 @@ export default function DatosGeneralesSE({
                   disabled={true}
                   readOnly={true}
                   placeholder="Calculado automáticamente"
-                  title="Calculado automáticamente: Math.round((Peso Neto Total * 1000) / Peso Promedio)"
+                  title="Calculado automáticamente: Math.round(Peso Neto Total / Peso Promedio)"
                   className="w-full px-3 py-2 text-xs border border-slate-200 bg-slate-100 text-slate-700 font-mono font-bold rounded-lg cursor-not-allowed select-none"
                 />
                 <span className="text-[10px] text-slate-400 mt-0.5 block">
@@ -575,29 +584,19 @@ export default function DatosGeneralesSE({
             >
               Inicio Tableteado <span className="text-red-500">*</span>
             </label>
-            {readOnly ? (
-              <input
-                type="text"
+            <DateTime24Input
+              id="fechaInicioTableteado"
+              value={values.fechaInicioTableteado || ""}
+              onChange={(val) => onChangeField("fechaInicioTableteado", val)}
+              readOnly={readOnly}
+              disabled={readOnly}
+              maxDate={getMaxDateOnly()}
+              className={getGlowBorderClass(
+                isUnmodifiedField("fechaInicioTableteado"),
+                Boolean(errors.fechaInicioTableteado),
                 readOnly
-                disabled
-                value={values.fechaInicioTableteado ? formatDateTime(values.fechaInicioTableteado) : "-"}
-                className="w-full px-2.5 py-1.5 text-xs border rounded-lg bg-slate-100 text-slate-700 font-mono cursor-not-allowed select-none"
-              />
-            ) : (
-              <input
-                id="fechaInicioTableteado"
-                type="datetime-local"
-                max={getMaxDateTime()}
-                value={values.fechaInicioTableteado || ""}
-                onChange={(e) => onChangeField("fechaInicioTableteado", e.target.value)}
-                disabled={readOnly}
-                className={`w-full px-2.5 py-1.5 text-xs border rounded-lg transition font-mono ${getGlowBorderClass(
-                  isUnmodifiedField("fechaInicioTableteado"),
-                  Boolean(errors.fechaInicioTableteado),
-                  readOnly
-                )}`}
-              />
-            )}
+              )}
+            />
             {isUnmodifiedField("fechaInicioTableteado") && !errors.fechaInicioTableteado && (
               <span className="text-[10px] text-blue-600 font-semibold mt-0.5 block">
                 Dato exactamente igual al registro anterior
@@ -617,29 +616,19 @@ export default function DatosGeneralesSE({
             >
               Fin Tableteado <span className="text-red-500">*</span>
             </label>
-            {readOnly ? (
-              <input
-                type="text"
+            <DateTime24Input
+              id="fechaFinTableteado"
+              value={values.fechaFinTableteado || ""}
+              onChange={(val) => onChangeField("fechaFinTableteado", val)}
+              readOnly={readOnly}
+              disabled={readOnly}
+              maxDate={getMaxDateOnly()}
+              className={getGlowBorderClass(
+                isUnmodifiedField("fechaFinTableteado"),
+                Boolean(errors.fechaFinTableteado),
                 readOnly
-                disabled
-                value={values.fechaFinTableteado ? formatDateTime(values.fechaFinTableteado) : "-"}
-                className="w-full px-2.5 py-1.5 text-xs border rounded-lg bg-slate-100 text-slate-700 font-mono cursor-not-allowed select-none"
-              />
-            ) : (
-              <input
-                id="fechaFinTableteado"
-                type="datetime-local"
-                max={getMaxDateTime()}
-                value={values.fechaFinTableteado || ""}
-                onChange={(e) => onChangeField("fechaFinTableteado", e.target.value)}
-                disabled={readOnly}
-                className={`w-full px-2.5 py-1.5 text-xs border rounded-lg transition font-mono ${getGlowBorderClass(
-                  isUnmodifiedField("fechaFinTableteado"),
-                  Boolean(errors.fechaFinTableteado),
-                  readOnly
-                )}`}
-              />
-            )}
+              )}
+            />
             {isUnmodifiedField("fechaFinTableteado") && !errors.fechaFinTableteado && (
               <span className="text-[10px] text-blue-600 font-semibold mt-0.5 block">
                 Dato exactamente igual al registro anterior
@@ -659,29 +648,19 @@ export default function DatosGeneralesSE({
             >
               Inicio Recubrimiento <span className="text-red-500">*</span>
             </label>
-            {readOnly ? (
-              <input
-                type="text"
+            <DateTime24Input
+              id="fechaInicioRecubrimiento"
+              value={values.fechaInicioRecubrimiento || ""}
+              onChange={(val) => onChangeField("fechaInicioRecubrimiento", val)}
+              readOnly={readOnly}
+              disabled={readOnly}
+              maxDate={getMaxDateOnly()}
+              className={getGlowBorderClass(
+                isUnmodifiedField("fechaInicioRecubrimiento"),
+                Boolean(errors.fechaInicioRecubrimiento),
                 readOnly
-                disabled
-                value={values.fechaInicioRecubrimiento ? formatDateTime(values.fechaInicioRecubrimiento) : "-"}
-                className="w-full px-2.5 py-1.5 text-xs border rounded-lg bg-slate-100 text-slate-700 font-mono cursor-not-allowed select-none"
-              />
-            ) : (
-              <input
-                id="fechaInicioRecubrimiento"
-                type="datetime-local"
-                max={getMaxDateTime()}
-                value={values.fechaInicioRecubrimiento || ""}
-                onChange={(e) => onChangeField("fechaInicioRecubrimiento", e.target.value)}
-                disabled={readOnly}
-                className={`w-full px-2.5 py-1.5 text-xs border rounded-lg transition font-mono ${getGlowBorderClass(
-                  isUnmodifiedField("fechaInicioRecubrimiento"),
-                  Boolean(errors.fechaInicioRecubrimiento),
-                  readOnly
-                )}`}
-              />
-            )}
+              )}
+            />
             {isUnmodifiedField("fechaInicioRecubrimiento") && !errors.fechaInicioRecubrimiento && (
               <span className="text-[10px] text-blue-600 font-semibold mt-0.5 block">
                 Dato exactamente igual al registro anterior
@@ -701,29 +680,19 @@ export default function DatosGeneralesSE({
             >
               Fin 1era Carga <span className="text-red-500">*</span>
             </label>
-            {readOnly ? (
-              <input
-                type="text"
+            <DateTime24Input
+              id="fechaFinPrimeraCarga"
+              value={values.fechaFinPrimeraCarga || ""}
+              onChange={(val) => onChangeField("fechaFinPrimeraCarga", val)}
+              readOnly={readOnly}
+              disabled={readOnly}
+              maxDate={getMaxDateOnly()}
+              className={getGlowBorderClass(
+                isUnmodifiedField("fechaFinPrimeraCarga"),
+                Boolean(errors.fechaFinPrimeraCarga),
                 readOnly
-                disabled
-                value={values.fechaFinPrimeraCarga ? formatDateTime(values.fechaFinPrimeraCarga) : "-"}
-                className="w-full px-2.5 py-1.5 text-xs border rounded-lg bg-slate-100 text-slate-700 font-mono cursor-not-allowed select-none"
-              />
-            ) : (
-              <input
-                id="fechaFinPrimeraCarga"
-                type="datetime-local"
-                max={getMaxDateTime()}
-                value={values.fechaFinPrimeraCarga || ""}
-                onChange={(e) => onChangeField("fechaFinPrimeraCarga", e.target.value)}
-                disabled={readOnly}
-                className={`w-full px-2.5 py-1.5 text-xs border rounded-lg transition font-mono ${getGlowBorderClass(
-                  isUnmodifiedField("fechaFinPrimeraCarga"),
-                  Boolean(errors.fechaFinPrimeraCarga),
-                  readOnly
-                )}`}
-              />
-            )}
+              )}
+            />
             {isUnmodifiedField("fechaFinPrimeraCarga") && !errors.fechaFinPrimeraCarga && (
               <span className="text-[10px] text-blue-600 font-semibold mt-0.5 block">
                 Dato exactamente igual al registro anterior
@@ -743,29 +712,19 @@ export default function DatosGeneralesSE({
             >
               Fin Recubrimiento <span className="text-red-500">*</span>
             </label>
-            {readOnly ? (
-              <input
-                type="text"
+            <DateTime24Input
+              id="fechaFinRecubrimiento"
+              value={values.fechaFinRecubrimiento || ""}
+              onChange={(val) => onChangeField("fechaFinRecubrimiento", val)}
+              readOnly={readOnly}
+              disabled={readOnly}
+              maxDate={getMaxDateOnly()}
+              className={getGlowBorderClass(
+                isUnmodifiedField("fechaFinRecubrimiento"),
+                Boolean(errors.fechaFinRecubrimiento),
                 readOnly
-                disabled
-                value={values.fechaFinRecubrimiento ? formatDateTime(values.fechaFinRecubrimiento) : "-"}
-                className="w-full px-2.5 py-1.5 text-xs border rounded-lg bg-slate-100 text-slate-700 font-mono cursor-not-allowed select-none"
-              />
-            ) : (
-              <input
-                id="fechaFinRecubrimiento"
-                type="datetime-local"
-                max={getMaxDateTime()}
-                value={values.fechaFinRecubrimiento || ""}
-                onChange={(e) => onChangeField("fechaFinRecubrimiento", e.target.value)}
-                disabled={readOnly}
-                className={`w-full px-2.5 py-1.5 text-xs border rounded-lg transition font-mono ${getGlowBorderClass(
-                  isUnmodifiedField("fechaFinRecubrimiento"),
-                  Boolean(errors.fechaFinRecubrimiento),
-                  readOnly
-                )}`}
-              />
-            )}
+              )}
+            />
             {isUnmodifiedField("fechaFinRecubrimiento") && !errors.fechaFinRecubrimiento && (
               <span className="text-[10px] text-blue-600 font-semibold mt-0.5 block">
                 Dato exactamente igual al registro anterior

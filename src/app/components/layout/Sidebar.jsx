@@ -19,15 +19,22 @@ export default function Sidebar({ activeView }) {
       .catch(() => {});
   }, []);
 
-  // Verificar borrador en curso en tiempo real (Figma Comment 8)
+  // Verificar borrador en curso en tiempo real aislado por usuario (RBAC)
   useEffect(() => {
     const checkDraft = () => {
       try {
+        const userDraftKey = user?.id ? `se_form_draft_u_${user.id}` : "se_form_draft";
         const raw =
-          localStorage.getItem("se_form_draft") ||
-          sessionStorage.getItem("se_form_draft");
+          localStorage.getItem(userDraftKey) ||
+          sessionStorage.getItem(userDraftKey) ||
+          (!user?.id ? localStorage.getItem("se_form_draft") : null);
         if (raw) {
           const parsed = JSON.parse(raw);
+          // Si el borrador pertenece a otro usuario, no mostrar indicador
+          if (parsed.draftUserId && user?.id && parsed.draftUserId !== user.id) {
+            setHasDraft(false);
+            return;
+          }
           const hasContent = Boolean(
             parsed &&
               Number(parsed.currentStep) >= 2 &&
@@ -56,11 +63,14 @@ export default function Sidebar({ activeView }) {
       window.removeEventListener("storage", checkDraft);
       clearInterval(interval);
     };
-  }, []);
+  }, [user]);
 
   async function handleLogout() {
     try {
       if (typeof window !== "undefined") {
+        if (user?.id) {
+          sessionStorage.removeItem(`se_draft_session_u_${user.id}`);
+        }
         sessionStorage.removeItem("se_draft_session_active");
       }
       await fetch("/api/auth/logout", { method: "POST" });
@@ -92,12 +102,13 @@ export default function Sidebar({ activeView }) {
     { id: "pt-se", label: "Consulta SE (Granel)", icon: "search", href: "/pt/se" },
   ];
 
+  const adminItems = [
+    { id: "admin-usuarios", label: "Gestión de Usuarios", icon: "user", href: "/admin" },
+  ];
+
   let items = [];
   if (role === "ADMIN") {
-    items = [
-      ...seItems,
-      ...ptItems,
-    ];
+    items = adminItems;
   } else if (role === "USER_SE") {
     items = seItems;
   } else {
@@ -107,12 +118,15 @@ export default function Sidebar({ activeView }) {
   const roleBadge = {
     USER_SE: { label: "Semielaborado (SE)", bg: "bg-blue-900/60 text-blue-200" },
     USER_PT: { label: "Prod. Terminado (PT)", bg: "bg-emerald-900/60 text-emerald-200" },
-    ADMIN: { label: "Administrador Global", bg: "bg-purple-900/60 text-purple-200" },
+    ADMIN: { label: "Administrador", bg: "bg-purple-900/60 text-purple-200" },
   }[role] || { label: "Usuario", bg: "bg-slate-800 text-slate-300" };
 
   return (
     <aside className="sidebar">
-      <Link href={role === "USER_SE" ? "/se" : "/pt"} className="brand hover:opacity-90 transition">
+      <Link
+        href={role === "ADMIN" ? "/admin" : role === "USER_SE" ? "/se" : "/pt"}
+        className="brand hover:opacity-90 transition"
+      >
         <span className="brand-icon">
           <Icon name="calculator" size={21} />
         </span>

@@ -67,7 +67,8 @@ export default function SeDetailPage() {
         ) : (
           <SEDetailView
             registro={registro}
-            userRole={user?.rol || "USER_SE"}
+            userRole={user?.rol || ""}
+            user={user}
             isPTView={false}
           />
         )}

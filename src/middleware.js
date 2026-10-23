@@ -34,6 +34,9 @@ export async function middleware(request) {
   // Si intenta ir a /login
   if (pathname === "/login") {
     if (user) {
+      if (user.rol === "ADMIN") {
+        return NextResponse.redirect(new URL("/admin", request.url));
+      }
       if (user.rol === "USER_SE") {
         return NextResponse.redirect(new URL("/se", request.url));
       }
@@ -47,6 +50,9 @@ export async function middleware(request) {
     if (!user) {
       return NextResponse.redirect(new URL("/login", request.url));
     }
+    if (user.rol === "ADMIN") {
+      return NextResponse.redirect(new URL("/admin", request.url));
+    }
     if (user.rol === "USER_SE") {
       return NextResponse.redirect(new URL("/se", request.url));
     }
@@ -56,11 +62,23 @@ export async function middleware(request) {
   // Rutas protegidas: requiere autenticación
   const isSeRoute = pathname.startsWith("/se");
   const isPtRoute = pathname.startsWith("/pt") || pathname.startsWith("/conciliaciones") || pathname.startsWith("/historial");
+  const isAdminRoute = pathname.startsWith("/admin");
 
-  if (!user && (isSeRoute || isPtRoute)) {
+  if (!user && (isSeRoute || isPtRoute || isAdminRoute)) {
     const loginUrl = new URL("/login", request.url);
     loginUrl.searchParams.set("redirect", pathname);
     return NextResponse.redirect(loginUrl);
+  }
+
+  // El administrador no trabaja con semielaborado ni terminado: redirigir siempre a /admin
+  if (user?.rol === "ADMIN" && (isSeRoute || isPtRoute)) {
+    return NextResponse.redirect(new URL("/admin", request.url));
+  }
+
+  // Rutas de administración exclusivas para ADMIN
+  if (isAdminRoute && user?.rol !== "ADMIN") {
+    const fallbackPath = user?.rol === "USER_SE" ? "/se" : "/pt";
+    return NextResponse.redirect(new URL(fallbackPath, request.url));
   }
 
   // Control RBAC: USER_SE intentando entrar a PT
@@ -86,6 +104,7 @@ export const config = {
   matcher: [
     "/",
     "/login",
+    "/admin/:path*",
     "/se/:path*",
     "/pt/:path*",
     "/conciliaciones/:path*",

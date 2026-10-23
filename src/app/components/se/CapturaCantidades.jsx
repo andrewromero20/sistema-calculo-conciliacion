@@ -478,7 +478,7 @@ export default function CapturaCantidades({
         isOpen={showResetConfirm}
         onClose={() => setShowResetConfirm(false)}
         title="Confirmar reinicio de cantidades"
-        message="¿Deseas borrar todas las cantidades registradas? Esto reiniciará las 48 pesadas a cero."
+        message="¿Deseas borrar todas las cantidades registradas? Esto reiniciará todas las pesadas a cero."
         actionText="Sí, borrar todo"
         cancelText="Cancelar"
         type="warning"

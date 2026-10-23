@@ -1,19 +1,202 @@
 import { prisma } from "./prisma.js";
 import { SEED_USERS, hashPassword, comparePassword } from "./auth.js";
+import fs from "fs";
+import path from "path";
+
+const DATA_DIR = path.join(process.cwd(), "data");
+const USERS_FALLBACK_FILE = path.join(DATA_DIR, "users-storage.json");
+
+let isPrismaOffline = false;
+let lastPrismaCheck = 0;
+const PRISMA_OFFLINE_COOLDOWN = 60000;
+
+function isPrismaAvailable() {
+  if (isPrismaOffline && Date.now() - lastPrismaCheck < PRISMA_OFFLINE_COOLDOWN) {
+    return false;
+  }
+  return true;
+}
+
+function markPrismaOffline(err) {
+  isPrismaOffline = true;
+  lastPrismaCheck = Date.now();
+  console.warn("Prisma no disponible para usuarios (usando fallback JSON):", err?.message || err);
+}
+
+function markPrismaOnline() {
+  isPrismaOffline = false;
+}
+
+function ensureUsersFallbackFile() {
+  try {
+    if (!fs.existsSync(DATA_DIR)) {
+      fs.mkdirSync(DATA_DIR, { recursive: true });
+    }
+    if (!fs.existsSync(USERS_FALLBACK_FILE)) {
+      const initialUsers = SEED_USERS.map((u) => ({
+        id: u.id,
+        nombre: u.nombre,
+        email: u.email,
+        password: u.passwordRaw,
+        rol: u.rol,
+        fechaCreacion: new Date(Date.now() - 3600000 * 24 * 7).toISOString(),
+      }));
+      fs.writeFileSync(USERS_FALLBACK_FILE, JSON.stringify(initialUsers, null, 2), "utf8");
+    }
+  } catch (err) {
+    console.error("Error al inicializar users fallback storage:", err);
+  }
+}
+
+function readUsersFallback() {
+  ensureUsersFallbackFile();
+  try {
+    const raw = fs.readFileSync(USERS_FALLBACK_FILE, "utf8");
+    return JSON.parse(raw);
+  } catch (err) {
+    console.error("Error al leer users fallback storage:", err);
+    return SEED_USERS.map((u) => ({
+      id: u.id,
+      nombre: u.nombre,
+      email: u.email,
+      password: u.passwordRaw,
+      rol: u.rol,
+      fechaCreacion: new Date().toISOString(),
+    }));
+  }
+}
+
+function writeUsersFallback(users) {
+  ensureUsersFallbackFile();
+  try {
+    fs.writeFileSync(USERS_FALLBACK_FILE, JSON.stringify(users, null, 2), "utf8");
+  } catch (err) {
+    console.error("Error al escribir users fallback storage:", err);
+  }
+}
+
+export async function listarUsuarios() {
+  if (isPrismaAvailable()) {
+    try {
+      const usuarios = await prisma.usuario.findMany({
+        select: {
+          id: true,
+          nombre: true,
+          email: true,
+          rol: true,
+          fechaCreacion: true,
+        },
+        orderBy: { id: "asc" },
+      });
+      if (usuarios && usuarios.length > 0) {
+        markPrismaOnline();
+        return usuarios;
+      }
+    } catch (err) {
+      markPrismaOffline(err);
+    }
+  }
+
+  // Fallback local
+  const users = readUsersFallback();
+  return users.map((u) => ({
+    id: u.id,
+    nombre: u.nombre,
+    email: u.email,
+    rol: u.rol,
+    fechaCreacion: u.fechaCreacion || new Date().toISOString(),
+  }));
+}
+
+export async function actualizarRolUsuario(id, nuevoRol) {
+  const validRoles = ["USER_SE", "USER_PT", "ADMIN"];
+  if (!validRoles.includes(nuevoRol)) {
+    throw new Error(`Rol inválido: ${nuevoRol}. Roles permitidos: USER_SE, USER_PT, ADMIN`);
+  }
+
+  const numericId = Number(id);
+  let updatedUser = null;
+
+  if (isPrismaAvailable()) {
+    try {
+      updatedUser = await prisma.usuario.update({
+        where: { id: numericId },
+        data: { rol: nuevoRol },
+        select: {
+          id: true,
+          nombre: true,
+          email: true,
+          rol: true,
+          fechaCreacion: true,
+        },
+      });
+      markPrismaOnline();
+    } catch (err) {
+      markPrismaOffline(err);
+    }
+  }
+
+  // Actualizar también en el almacenamiento local fallback
+  const users = readUsersFallback();
+  const index = users.findIndex((u) => Number(u.id) === numericId);
+  if (index !== -1) {
+    users[index].rol = nuevoRol;
+    writeUsersFallback(users);
+    if (!updatedUser) {
+      updatedUser = {
+        id: users[index].id,
+        nombre: users[index].nombre,
+        email: users[index].email,
+        rol: users[index].rol,
+        fechaCreacion: users[index].fechaCreacion,
+      };
+    }
+  }
+
+  // Sincronizar memoria en SEED_USERS
+  const seed = SEED_USERS.find((u) => Number(u.id) === numericId);
+  if (seed) {
+    seed.rol = nuevoRol;
+  }
+
+  if (!updatedUser) {
+    throw new Error(`Usuario con ID ${id} no encontrado.`);
+  }
+
+  return updatedUser;
+}
 
 export async function buscarUsuarioPorEmail(email) {
   const cleanEmail = String(email || "").trim().toLowerCase();
 
-  try {
-    const usuario = await prisma.usuario.findUnique({
-      where: { email: cleanEmail },
-    });
-    if (usuario) return usuario;
-  } catch (err) {
-    console.warn("Prisma no disponible para buscarUsuarioPorEmail:", err.message);
+  if (isPrismaAvailable()) {
+    try {
+      const usuario = await prisma.usuario.findUnique({
+        where: { email: cleanEmail },
+      });
+      if (usuario) {
+        markPrismaOnline();
+        return usuario;
+      }
+    } catch (err) {
+      markPrismaOffline(err);
+    }
   }
 
-  // Fallback a SEED_USERS
+  // Fallback local desde users-storage.json o SEED_USERS
+  const users = readUsersFallback();
+  const found = users.find((u) => u.email.toLowerCase() === cleanEmail);
+  if (found) {
+    return {
+      id: found.id,
+      nombre: found.nombre,
+      email: found.email,
+      password: found.password,
+      rol: found.rol,
+      fechaCreacion: found.fechaCreacion,
+    };
+  }
+
   const seed = SEED_USERS.find((u) => u.email.toLowerCase() === cleanEmail);
   if (!seed) return null;
 
@@ -21,7 +204,7 @@ export async function buscarUsuarioPorEmail(email) {
     id: seed.id,
     nombre: seed.nombre,
     email: seed.email,
-    password: seed.passwordRaw, // en fallback verificaremos tanto con hash como con texto plano
+    password: seed.passwordRaw,
     rol: seed.rol,
   };
 }
@@ -39,6 +222,10 @@ export async function validarCredenciales(email, plainPassword) {
   // Si coincide directamente con el password inicial de semilla
   const seed = SEED_USERS.find((u) => u.email.toLowerCase() === usuario.email.toLowerCase());
   if (seed && seed.passwordRaw === plainPassword) {
+    return usuario;
+  }
+
+  if (usuario.password === plainPassword) {
     return usuario;
   }
 

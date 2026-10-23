@@ -1,0 +1,26 @@
+[
+  {
+    "id": 1,
+    "nombre": "Supervisor Semielaborados",
+    "email": "se@empresa.com",
+    "password": "Se123!",
+    "rol": "USER_SE",
+    "fechaCreacion": "2026-10-16T20:52:22.390Z"
+  },
+  {
+    "id": 2,
+    "nombre": "Supervisor Producto Terminado",
+    "email": "pt@empresa.com",
+    "password": "Pt123!",
+    "rol": "USER_PT",
+    "fechaCreacion": "2026-10-16T20:52:22.390Z"
+  },
+  {
+    "id": 3,
+    "nombre": "Administrador General",
+    "email": "admin@empresa.com",
+    "password": "Admin123!",
+    "rol": "ADMIN",
+    "fechaCreacion": "2026-10-16T20:52:22.390Z"
+  }
+]

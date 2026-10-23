@@ -8,6 +8,7 @@ import { registroSESchema } from "@/lib/validations/seSchema";
 import PesosTable from "./PesosTable";
 import PesosModal from "./PesosModal";
 import AuditTrailModal from "./AuditTrailModal";
+import DateTime24Input from "./DateTime24Input";
 import Icon from "../ui/Icon";
 
 const DRAFT_STORAGE_KEY = "se_form_draft";
@@ -621,7 +622,7 @@ export default function FormularioSE({
 
             <div>
               <label className="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-1">
-                Peso Promedio (g/tab) <span className="text-red-500">*</span>
+                Peso Promedio <span className="text-red-500">*</span>
               </label>
               <input
                 type="number"
@@ -834,15 +835,18 @@ export default function FormularioSE({
               <label className="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-1">
                 Inicio Tableteado <span className="text-red-500">*</span>
               </label>
-              <input
-                type="datetime-local"
-                disabled={readOnly}
-                {...register("fechaInicioTableteado")}
-                className={`w-full px-3 py-2 border rounded-lg text-xs ${
-                  errors.fechaInicioTableteado
-                    ? "border-red-400 bg-red-50/20"
-                    : "border-slate-300"
-                } disabled:bg-slate-100 disabled:text-slate-600`}
+              <Controller
+                name="fechaInicioTableteado"
+                control={control}
+                render={({ field }) => (
+                  <DateTime24Input
+                    id="fechaInicioTableteado"
+                    value={field.value || ""}
+                    onChange={field.onChange}
+                    disabled={readOnly}
+                    readOnly={readOnly}
+                  />
+                )}
               />
               {errors.fechaInicioTableteado && (
                 <p className="text-[11px] text-red-600 mt-1">
@@ -855,15 +859,18 @@ export default function FormularioSE({
               <label className="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-1">
                 Fin Tableteado <span className="text-red-500">*</span>
               </label>
-              <input
-                type="datetime-local"
-                disabled={readOnly}
-                {...register("fechaFinTableteado")}
-                className={`w-full px-3 py-2 border rounded-lg text-xs ${
-                  errors.fechaFinTableteado
-                    ? "border-red-400 bg-red-50/20"
-                    : "border-slate-300"
-                } disabled:bg-slate-100 disabled:text-slate-600`}
+              <Controller
+                name="fechaFinTableteado"
+                control={control}
+                render={({ field }) => (
+                  <DateTime24Input
+                    id="fechaFinTableteado"
+                    value={field.value || ""}
+                    onChange={field.onChange}
+                    disabled={readOnly}
+                    readOnly={readOnly}
+                  />
+                )}
               />
               {errors.fechaFinTableteado && (
                 <p className="text-[11px] text-red-600 mt-1">
@@ -876,15 +883,18 @@ export default function FormularioSE({
               <label className="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-1">
                 Inicio Recubrimiento <span className="text-red-500">*</span>
               </label>
-              <input
-                type="datetime-local"
-                disabled={readOnly}
-                {...register("fechaInicioRecubrimiento")}
-                className={`w-full px-3 py-2 border rounded-lg text-xs ${
-                  errors.fechaInicioRecubrimiento
-                    ? "border-red-400 bg-red-50/20"
-                    : "border-slate-300"
-                } disabled:bg-slate-100 disabled:text-slate-600`}
+              <Controller
+                name="fechaInicioRecubrimiento"
+                control={control}
+                render={({ field }) => (
+                  <DateTime24Input
+                    id="fechaInicioRecubrimiento"
+                    value={field.value || ""}
+                    onChange={field.onChange}
+                    disabled={readOnly}
+                    readOnly={readOnly}
+                  />
+                )}
               />
               {errors.fechaInicioRecubrimiento && (
                 <p className="text-[11px] text-red-600 mt-1">
@@ -897,15 +907,18 @@ export default function FormularioSE({
               <label className="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-1">
                 Fin Primera Carga <span className="text-red-500">*</span>
               </label>
-              <input
-                type="datetime-local"
-                disabled={readOnly}
-                {...register("fechaFinPrimeraCarga")}
-                className={`w-full px-3 py-2 border rounded-lg text-xs ${
-                  errors.fechaFinPrimeraCarga
-                    ? "border-red-400 bg-red-50/20"
-                    : "border-slate-300"
-                } disabled:bg-slate-100 disabled:text-slate-600`}
+              <Controller
+                name="fechaFinPrimeraCarga"
+                control={control}
+                render={({ field }) => (
+                  <DateTime24Input
+                    id="fechaFinPrimeraCarga"
+                    value={field.value || ""}
+                    onChange={field.onChange}
+                    disabled={readOnly}
+                    readOnly={readOnly}
+                  />
+                )}
               />
               {errors.fechaFinPrimeraCarga && (
                 <p className="text-[11px] text-red-600 mt-1">
@@ -918,15 +931,18 @@ export default function FormularioSE({
               <label className="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-1">
                 Fin Recubrimiento <span className="text-red-500">*</span>
               </label>
-              <input
-                type="datetime-local"
-                disabled={readOnly}
-                {...register("fechaFinRecubrimiento")}
-                className={`w-full px-3 py-2 border rounded-lg text-xs ${
-                  errors.fechaFinRecubrimiento
-                    ? "border-red-400 bg-red-50/20"
-                    : "border-slate-300"
-                } disabled:bg-slate-100 disabled:text-slate-600`}
+              <Controller
+                name="fechaFinRecubrimiento"
+                control={control}
+                render={({ field }) => (
+                  <DateTime24Input
+                    id="fechaFinRecubrimiento"
+                    value={field.value || ""}
+                    onChange={field.onChange}
+                    disabled={readOnly}
+                    readOnly={readOnly}
+                  />
+                )}
               />
               {errors.fechaFinRecubrimiento && (
                 <p className="text-[11px] text-red-600 mt-1">

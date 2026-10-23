@@ -11,6 +11,14 @@ import AppErrorModal from "../ui/AppErrorModal";
 const DRAFT_STORAGE_KEY = "se_form_draft";
 const DRAFT_SESSION_KEY = "se_draft_session_active";
 
+function getDraftStorageKey(user) {
+  return user?.id ? `se_form_draft_u_${user.id}` : DRAFT_STORAGE_KEY;
+}
+
+function getDraftSessionKey(user) {
+  return user?.id ? `se_draft_session_u_${user.id}` : DRAFT_SESSION_KEY;
+}
+
 const INITIAL_STATE = {
   ordenGranel: "",
   lote: "",
@@ -62,6 +70,8 @@ export default function NuevoRegistroWizard() {
   const [successBanner, setSuccessBanner] = useState(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [apiError, setApiError] = useState("");
+  const [currentUser, setCurrentUser] = useState(null);
+  const [showResetStep3Confirm, setShowResetStep3Confirm] = useState(false);
 
   // Modal nativo de validación / error
   const [errorModal, setErrorModal] = useState({ isOpen: false, title: "", message: "" });
@@ -78,6 +88,50 @@ export default function NuevoRegistroWizard() {
   const notifyDraftUpdate = useCallback(() => {
     if (typeof window !== "undefined") {
       window.dispatchEvent(new Event("se-draft-update"));
+    }
+  }, []);
+
+  // Cargar usuario autenticado de la sesión activa
+  useEffect(() => {
+    fetch("/api/auth/me")
+      .then((res) => (res.ok ? res.json() : null))
+      .then((data) => {
+        if (data?.user) setCurrentUser(data.user);
+      })
+      .catch(() => {});
+  }, []);
+
+  // Cargar plantilla proveniente del historial (Punto 7)
+  useEffect(() => {
+    try {
+      const rawTpl = sessionStorage.getItem("se_apply_template");
+      if (rawTpl) {
+        sessionStorage.removeItem("se_apply_template");
+        const prev = JSON.parse(rawTpl);
+        const tplValues = {
+          ...INITIAL_STATE,
+          codigoMaterial: prev.codigoMaterial || "",
+          producto: prev.producto || "",
+          tamanoLoteEstandar: prev.tamanoLoteEstandar || "",
+          supervisorPreparacion: prev.supervisorPreparacion || "",
+          supervisorTabRecub: prev.supervisorTabRecub || "",
+          pesoPromedio: prev.pesoPromedio || "",
+          cantTabPorPza: prev.cantTabPorPza ? String(prev.cantTabPorPza) : "1",
+          muestrasTabRecub: prev.muestrasTabRecub ? String(prev.muestrasTabRecub) : "",
+          ctecGranelSap: prev.ctecGranelSap || "",
+          pesos: Array.from({ length: 48 }, () => ({
+            pesoBruto: "",
+            pesoTara: "",
+            pesoNeto: 0,
+          })),
+        };
+        setValues(tplValues);
+        setTemplateMode(true);
+        setTemplateBaseline({ ...tplValues });
+        setCurrentStep(1);
+      }
+    } catch (e) {
+      console.error("Error al aplicar plantilla desde historial:", e);
     }
   }, []);
 
@@ -108,9 +162,10 @@ export default function NuevoRegistroWizard() {
     let rend = "";
 
     if (pesoNeto > 0 && pesoProm > 0) {
-      // 9. CANT. PZAS A CARGAR EN SAP = Math.round((PESO NETO TOTAL * 1000) / PESO PROMEDIO)
-      // Redondeo de producto entero: < 0.5 hacia abajo, >= 0.5 hacia arriba
-      const piezas = Math.round((pesoNeto * 1000) / pesoProm);
+      // 9. CANT. PZAS A CARGAR EN SAP = Math.round(PESO NETO TOTAL / PESO PROMEDIO)
+      // Sin multiplicar por 1000. Redondeo de producto entero: < 0.5 hacia abajo, >= 0.5 hacia arriba
+      const rawPiezas = pesoNeto / pesoProm;
+      const piezas = Math.round(rawPiezas);
       cantSap = piezas;
 
       // 10. CANT. PZAS A ACONDICIONAR = Math.round(CANT. PZAS A CARGAR EN SAP / CANT DE TAB. POR PZA)
@@ -119,16 +174,12 @@ export default function NuevoRegistroWizard() {
         cantAcond = Math.round(piezas / cantTabPorPza);
       }
 
-      // 11 y 10. RENDIMIENTO TAB = ((PESO NETO TOTAL / PESO PROMEDIO) / TAMAÑO DEL LOTE ESTANDAR)
-      // Formato como porcentaje realista (ej. 92.5%, nunca 92456.3%)
+      // 11. RENDIMIENTO TAB = ((PESO NETO TOTAL / PESO PROMEDIO) / TAMAÑO DEL LOTE ESTANDAR)
       if (tamanoLote > 0) {
         let r =
           tamanoLote > 1000
-            ? (piezas / tamanoLote) * 100
+            ? (rawPiezas / tamanoLote) * 100
             : (pesoNeto / tamanoLote) * 100;
-        while (r > 500) {
-          r = r / 1000;
-        }
         rend = Number(r.toFixed(1));
       }
     }
@@ -178,6 +229,11 @@ export default function NuevoRegistroWizard() {
     setOrdenExistenteInfo(null);
     setOrdenError("");
     try {
+      const storageKey = getDraftStorageKey(currentUser);
+      const sessionKey = getDraftSessionKey(currentUser);
+      localStorage.removeItem(storageKey);
+      sessionStorage.removeItem(storageKey);
+      sessionStorage.removeItem(sessionKey);
       localStorage.removeItem(DRAFT_STORAGE_KEY);
       sessionStorage.removeItem(DRAFT_STORAGE_KEY);
       sessionStorage.removeItem(DRAFT_SESSION_KEY);
@@ -229,15 +285,23 @@ export default function NuevoRegistroWizard() {
     }));
   }
 
-  // Verificar borrador al montar el componente
+  // Verificar borrador al montar o cambiar de usuario
   useEffect(() => {
+    if (!currentUser) return;
     try {
+      const storageKey = getDraftStorageKey(currentUser);
+      const sessionKey = getDraftSessionKey(currentUser);
       const raw =
-        localStorage.getItem(DRAFT_STORAGE_KEY) ||
-        sessionStorage.getItem(DRAFT_STORAGE_KEY);
+        localStorage.getItem(storageKey) ||
+        sessionStorage.getItem(storageKey);
       if (!raw) return;
 
       const parsed = JSON.parse(raw);
+      // RBAC: El borrador debe pertenecer única y exclusivamente al usuario que lo estaba registrando
+      if (parsed.draftUserId && parsed.draftUserId !== currentUser.id) {
+        return;
+      }
+
       const hasContent = Boolean(
         parsed.ordenGranel ||
           parsed.lote ||
@@ -248,7 +312,7 @@ export default function NuevoRegistroWizard() {
       if (!hasContent) return;
 
       const isSessionActive =
-        sessionStorage.getItem(DRAFT_SESSION_KEY) === "true";
+        sessionStorage.getItem(sessionKey) === "true";
 
       if (isSessionActive) {
         // El usuario está navegando entre menús dentro de la aplicación:
@@ -269,12 +333,11 @@ export default function NuevoRegistroWizard() {
     } catch (e) {
       console.error("Error al cargar borrador previo:", e);
     }
-  }, []);
+  }, [currentUser]);
 
-  // Guardar en localStorage y sessionStorage en tiempo real
+  // Guardar en localStorage y sessionStorage en tiempo real aislado por usuario
   useEffect(() => {
-    // Si hay un aviso pendiente de una sesión previa, no sobrescribir el borrador antes de que decida el usuario
-    if (hasDraftNotice) return;
+    if (hasDraftNotice || !currentUser) return;
 
     const hasData =
       Boolean(values.ordenGranel) ||
@@ -282,19 +345,23 @@ export default function NuevoRegistroWizard() {
       Boolean(values.producto) ||
       values.pesos.some((p) => Number(p.pesoBruto) > 0);
 
+    const storageKey = getDraftStorageKey(currentUser);
+    const sessionKey = getDraftSessionKey(currentUser);
+
     if (hasData) {
       const serialized = JSON.stringify({
         ...values,
         currentStep,
         templateMode,
         templateBaseline,
+        draftUserId: currentUser.id,
       });
-      localStorage.setItem(DRAFT_STORAGE_KEY, serialized);
-      sessionStorage.setItem(DRAFT_STORAGE_KEY, serialized);
-      sessionStorage.setItem(DRAFT_SESSION_KEY, "true");
+      localStorage.setItem(storageKey, serialized);
+      sessionStorage.setItem(storageKey, serialized);
+      sessionStorage.setItem(sessionKey, "true");
       notifyDraftUpdate();
     }
-  }, [values, currentStep, hasDraftNotice, notifyDraftUpdate, templateMode, templateBaseline]);
+  }, [values, currentStep, hasDraftNotice, notifyDraftUpdate, templateMode, templateBaseline, currentUser]);
 
   // Protección beforeunload
   useEffect(() => {
@@ -316,9 +383,11 @@ export default function NuevoRegistroWizard() {
 
   function restaurarBorrador() {
     try {
+      const storageKey = getDraftStorageKey(currentUser);
+      const sessionKey = getDraftSessionKey(currentUser);
       const raw =
-        localStorage.getItem(DRAFT_STORAGE_KEY) ||
-        sessionStorage.getItem(DRAFT_STORAGE_KEY);
+        localStorage.getItem(storageKey) ||
+        sessionStorage.getItem(storageKey);
       if (raw) {
         const parsed = JSON.parse(raw);
         setValues((prev) => ({ ...prev, ...parsed }));
@@ -329,7 +398,7 @@ export default function NuevoRegistroWizard() {
         } else if (parsed.ordenGranel) {
           setCurrentStep(2);
         }
-        sessionStorage.setItem(DRAFT_SESSION_KEY, "true");
+        sessionStorage.setItem(sessionKey, "true");
         setHasDraftNotice(false);
         notifyDraftUpdate();
       }
@@ -340,6 +409,11 @@ export default function NuevoRegistroWizard() {
 
   function descartarBorrador() {
     try {
+      const storageKey = getDraftStorageKey(currentUser);
+      const sessionKey = getDraftSessionKey(currentUser);
+      localStorage.removeItem(storageKey);
+      sessionStorage.removeItem(storageKey);
+      sessionStorage.removeItem(sessionKey);
       localStorage.removeItem(DRAFT_STORAGE_KEY);
       sessionStorage.removeItem(DRAFT_STORAGE_KEY);
       sessionStorage.removeItem(DRAFT_SESSION_KEY);
@@ -353,6 +427,29 @@ export default function NuevoRegistroWizard() {
     setCurrentStep(1);
     setOrdenExistenteInfo(null);
     notifyDraftUpdate();
+  }
+
+  // Borrar exclusivamente los datos registrados del paso 3 (Punto 5)
+  function handleConfirmResetStep3() {
+    setValues((prev) => ({
+      ...prev,
+      supervisorPreparacion: "",
+      supervisorTabRecub: "",
+      tamanoLoteEstandar: "",
+      cantTabPorPza: "1",
+      pesoPromedio: "",
+      cantPzasCargarSap: "",
+      cantPzasAcondicionar: "",
+      muestrasTabRecub: "",
+      rendimientoTab: "",
+      ctecGranelSap: "",
+      fechaInicioTableteado: "",
+      fechaFinTableteado: "",
+      fechaInicioRecubrimiento: "",
+      fechaFinPrimeraCarga: "",
+      fechaFinRecubrimiento: "",
+    }));
+    setShowResetStep3Confirm(false);
   }
 
   // Actualización de campos
@@ -570,6 +667,11 @@ export default function NuevoRegistroWizard() {
 
       // Limpiar borrador temporal
       try {
+        const storageKey = getDraftStorageKey(currentUser);
+        const sessionKey = getDraftSessionKey(currentUser);
+        localStorage.removeItem(storageKey);
+        sessionStorage.removeItem(storageKey);
+        sessionStorage.removeItem(sessionKey);
         localStorage.removeItem(DRAFT_STORAGE_KEY);
         sessionStorage.removeItem(DRAFT_STORAGE_KEY);
         sessionStorage.removeItem(DRAFT_SESSION_KEY);
@@ -595,6 +697,11 @@ export default function NuevoRegistroWizard() {
     setSuccessBanner(null);
     setTemplateMode(false);
     try {
+      const storageKey = getDraftStorageKey(currentUser);
+      const sessionKey = getDraftSessionKey(currentUser);
+      localStorage.removeItem(storageKey);
+      sessionStorage.removeItem(storageKey);
+      sessionStorage.removeItem(sessionKey);
       localStorage.removeItem(DRAFT_STORAGE_KEY);
       sessionStorage.removeItem(DRAFT_STORAGE_KEY);
       sessionStorage.removeItem(DRAFT_SESSION_KEY);
@@ -1024,11 +1131,20 @@ export default function NuevoRegistroWizard() {
                 Datos Técnicos del Lote · Orden {values.ordenGranel}
               </h2>
             </div>
-            <div className="flex items-center gap-2">
+            <div className="flex flex-wrap items-center gap-2">
+              <button
+                type="button"
+                onClick={() => setShowResetStep3Confirm(true)}
+                className="py-1.5 px-3 rounded-lg border border-red-200 text-red-600 hover:bg-red-50 text-xs font-semibold shadow-xs transition inline-flex items-center gap-1.5 cursor-pointer"
+                title="Borrar exclusivamente los datos técnicos capturados en este paso 3"
+              >
+                <Icon name="trash" size={13} />
+                <span>Borrar datos técnicos</span>
+              </button>
               <button
                 type="button"
                 onClick={() => setCurrentStep(2)}
-                className="py-1.5 px-3.5 rounded-lg bg-[#1a2b45] hover:bg-[#142236] text-white text-xs font-semibold shadow-xs transition inline-flex items-center gap-1.5"
+                className="py-1.5 px-3.5 rounded-lg bg-[#1a2b45] hover:bg-[#142236] text-white text-xs font-semibold shadow-xs transition inline-flex items-center gap-1.5 cursor-pointer"
               >
                 ← Volver a Cantidades
               </button>
@@ -1036,7 +1152,7 @@ export default function NuevoRegistroWizard() {
                 type="button"
                 onClick={handleGuardarRegistro}
                 disabled={isSubmitting}
-                className="py-1.5 px-5 rounded-lg bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 text-white text-xs font-bold shadow-xs transition"
+                className="py-1.5 px-5 rounded-lg bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 text-white text-xs font-bold shadow-xs transition cursor-pointer"
               >
                 {isSubmitting ? "Guardando..." : "Confirmar y Guardar Registro"}
               </button>
@@ -1130,6 +1246,18 @@ export default function NuevoRegistroWizard() {
           </div>
         </div>
       )}
+
+      {/* Modal para Confirmar Reinicio de Datos Técnicos (Paso 3) */}
+      <AppErrorModal
+        isOpen={showResetStep3Confirm}
+        onClose={() => setShowResetStep3Confirm(false)}
+        title="Confirmar reinicio de datos técnicos"
+        message="¿Deseas borrar los datos técnicos registrados? Esto limpiará los campos capturados en este paso sin alterar las cantidades del paso anterior."
+        actionText="Sí, borrar datos técnicos"
+        cancelText="Cancelar"
+        type="warning"
+        onConfirm={handleConfirmResetStep3}
+      />
 
       {/* Modal Nativo de Notificación de Error / Validación */}
       <AppErrorModal

@@ -21,6 +21,7 @@ import { formatDateTime, formatFriendlyDateTime } from "../../lib/dateFormat";
 export default function SEDetailView({
   registro: initialRegistro,
   userRole = "USER_SE",
+  user = null,
   isPTView = false,
 }) {
   const router = useRouter();
@@ -128,7 +129,10 @@ export default function SEDetailView({
     let rend = "";
 
     if (pesoNeto > 0 && pesoProm > 0) {
-      const piezas = Math.round((pesoNeto * 1000) / pesoProm);
+      // 9. CANT. PZAS A CARGAR EN SAP = Math.round(PESO NETO TOTAL / PESO PROMEDIO)
+      // Redondeo de producto entero: < 0.5 hacia abajo, >= 0.5 hacia arriba (sin multiplicar por 1000)
+      const rawPiezas = pesoNeto / pesoProm;
+      const piezas = Math.round(rawPiezas);
       cantSap = piezas;
 
       if (cantTabPorPza > 0) {
@@ -138,7 +142,7 @@ export default function SEDetailView({
       if (tamanoLote > 0) {
         const r =
           tamanoLote > 1000
-            ? (piezas / tamanoLote) * 100
+            ? (rawPiezas / tamanoLote) * 100
             : (pesoNeto / tamanoLote) * 100;
         rend = Number(r.toFixed(1));
       }
@@ -245,7 +249,18 @@ export default function SEDetailView({
     }
   }
 
-  const canEdit = !isPTView && (userRole === "USER_SE" || userRole === "ADMIN");
+  // Permiso de edición: únicamente usuarios operativos de Semielaborados con permiso de edición activo
+  const canEdit = !isPTView && (user?.rol || userRole) === "USER_SE" && user?.puedeEditar !== false;
+
+  function handleUsarComoPlantilla() {
+    if (!registro) return;
+    try {
+      sessionStorage.setItem("se_apply_template", JSON.stringify(registro));
+      router.push("/se/nuevo");
+    } catch (e) {
+      console.error("Error al preparar plantilla:", e);
+    }
+  }
 
   function handleOpenAuditModal() {
     setErrorMsg("");
@@ -339,10 +354,21 @@ export default function SEDetailView({
           <button
             type="button"
             onClick={() => setShowPesosModal(true)}
-            className="py-1.5 px-3.5 rounded-lg bg-blue-50 hover:bg-blue-100 border border-blue-200 text-[#0d6efd] text-xs font-bold transition flex items-center gap-1.5 shadow-xs"
+            className="py-1.5 px-3.5 rounded-lg bg-blue-50 hover:bg-blue-100 border border-blue-200 text-[#0d6efd] text-xs font-bold transition flex items-center gap-1.5 shadow-xs cursor-pointer"
           >
             <Icon name="table" size={14} />
             <span>Ver Pesos Capturados</span>
+          </button>
+
+          {/* Botón Usar como Plantilla (Punto 7) */}
+          <button
+            type="button"
+            onClick={handleUsarComoPlantilla}
+            className="py-1.5 px-3.5 rounded-lg bg-indigo-50 hover:bg-indigo-100 border border-indigo-200 text-indigo-700 text-xs font-bold transition flex items-center gap-1.5 shadow-xs cursor-pointer"
+            title="Usar datos de este registro como plantilla para una nueva captura"
+          >
+            <Icon name="copy" size={14} />
+            <span>Usar como Plantilla</span>
           </button>
 
           {/* Botón Habilitar/Cancelar Edición */}

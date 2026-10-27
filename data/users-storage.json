@@ -5,7 +5,8 @@
     "email": "se@empresa.com",
     "password": "Se123!",
     "rol": "USER_SE",
-    "fechaCreacion": "2026-10-16T20:52:22.390Z"
+    "fechaCreacion": "2026-10-16T20:52:22.390Z",
+    "puedeEditar": false
   },
   {
     "id": 2,

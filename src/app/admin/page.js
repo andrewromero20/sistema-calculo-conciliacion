@@ -403,7 +403,7 @@ export default function AdminPage() {
                     <th scope="col" className="px-5 py-3.5">
                       Rol Actual
                     </th>
-                    <th scope="col" className="px-5 py-3.5 text-center">
+                    <th scope="col" className="px-5 py-3.5 text-center whitespace-nowrap">
                       Permiso de edición
                     </th>
                     <th scope="col" className="px-5 py-3.5 text-center">
@@ -420,7 +420,7 @@ export default function AdminPage() {
                     return (
                       <tr key={u.id} className="hover:bg-slate-50/70 transition">
                         {/* Nombre y Avatar */}
-                        <td className="px-5 py-3.5">
+                        <td className="px-5 py-3.5 align-middle">
                           <div className="flex items-center gap-3">
                             <div
                               className={`w-8 h-8 rounded-full flex items-center justify-center font-bold text-xs shrink-0 ${
@@ -452,12 +452,12 @@ export default function AdminPage() {
                         </td>
 
                         {/* Correo Electrónico */}
-                        <td className="px-5 py-3.5 font-mono text-slate-700 font-medium">
+                        <td className="px-5 py-3.5 font-mono text-slate-700 font-medium align-middle">
                           {u.email}
                         </td>
 
                         {/* Rol Actual */}
-                        <td className="px-5 py-3.5">
+                        <td className="px-5 py-3.5 align-middle">
                           {u.rol === "USER_SE" ? (
                             <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-bold bg-blue-50 text-blue-800 border border-blue-200">
                               <span className="w-1.5 h-1.5 rounded-full bg-blue-600"></span>
@@ -477,37 +477,74 @@ export default function AdminPage() {
                         </td>
 
                         {/* Permiso de edición (Punto 5) */}
-                        <td className="px-5 py-3.5 text-center">
-                          {u.rol === "USER_SE" ? (
-                            <label className="inline-flex items-center justify-center cursor-pointer p-1">
-                              <input
-                                type="checkbox"
-                                checked={Boolean(u.puedeEditar)}
-                                disabled={isUpdating}
-                                onChange={() => handleToggleEditPermission(u)}
-                                className="w-4 h-4 text-blue-600 bg-white border-slate-300 rounded focus:ring-blue-500 cursor-pointer transition accent-blue-600"
+                        <td className="px-5 py-3.5 text-center align-middle">
+                          <div className="flex items-center justify-center">
+                            {u.rol === "USER_SE" ? (
+                              <label
+                                className={`inline-flex items-center justify-center ${
+                                  isUpdating ? "cursor-wait opacity-50" : "cursor-pointer"
+                                }`}
                                 title={
                                   u.puedeEditar
                                     ? "Permiso de edición habilitado. Clic para revocar."
                                     : "Sin permiso de edición. Clic para habilitar."
                                 }
-                              />
-                              <span className="sr-only">Permiso de edición para {u.nombre}</span>
-                            </label>
-                          ) : (
-                            <div
-                              className="inline-flex items-center justify-center"
-                              title="No disponible para usuarios fuera de Semielaborado"
-                            >
-                              <div className="w-4 h-4 rounded bg-slate-700 border border-slate-600 opacity-60 flex items-center justify-center cursor-not-allowed select-none">
-                                <span className="text-[10px] text-slate-400 font-bold leading-none">✕</span>
+                              >
+                                <input
+                                  type="checkbox"
+                                  checked={Boolean(u.puedeEditar)}
+                                  disabled={isUpdating}
+                                  onChange={() => handleToggleEditPermission(u)}
+                                  className="sr-only peer"
+                                />
+                                <div
+                                  className={`w-6 h-6 rounded-md border-2 flex items-center justify-center transition shadow-2xs peer-focus-visible:ring-2 peer-focus-visible:ring-blue-500 peer-focus-visible:ring-offset-1 ${
+                                    u.puedeEditar
+                                      ? "bg-blue-600 border-blue-600 text-white hover:bg-blue-700 hover:border-blue-700"
+                                      : "bg-white border-slate-300 hover:border-blue-400"
+                                  }`}
+                                >
+                                  {u.puedeEditar && (
+                                    <svg
+                                      className="w-4 h-4 text-white stroke-[3]"
+                                      fill="none"
+                                      viewBox="0 0 24 24"
+                                      stroke="currentColor"
+                                    >
+                                      <path
+                                        strokeLinecap="round"
+                                        strokeLinejoin="round"
+                                        d="M5 13l4 4L19 7"
+                                      />
+                                    </svg>
+                                  )}
+                                </div>
+                                <span className="sr-only">Permiso de edición para {u.nombre}</span>
+                              </label>
+                            ) : (
+                              <div
+                                className="w-6 h-6 rounded-md bg-slate-700 border border-slate-600 opacity-60 flex items-center justify-center cursor-not-allowed select-none"
+                                title="No disponible para usuarios fuera de Semielaborado"
+                              >
+                                <svg
+                                  className="w-3.5 h-3.5 text-slate-400 stroke-[2.5]"
+                                  fill="none"
+                                  viewBox="0 0 24 24"
+                                  stroke="currentColor"
+                                >
+                                  <path
+                                    strokeLinecap="round"
+                                    strokeLinejoin="round"
+                                    d="M6 18L18 6M6 6l12 12"
+                                  />
+                                </svg>
                               </div>
-                            </div>
-                          )}
+                            )}
+                          </div>
                         </td>
 
                         {/* Selector de Rol: Semi vs Terminado */}
-                        <td className="px-5 py-3.5 text-center">
+                        <td className="px-5 py-3.5 text-center align-middle">
                           {isAdmin ? (
                             <span className="text-[11px] text-slate-400 font-semibold italic">
                               Cuenta Administrador (Fijo)

@@ -1670,7 +1670,7 @@ const [ materialMessages,setMaterialMessages,] = useState({});
                   >
                     <strong>
                       {material.descripcion === "TABLETA"
-                        ? "TABLETA (TAB)"
+                        ? "TABLETA / CAPSULA"
                         : material.descripcion}
                     </strong>
 

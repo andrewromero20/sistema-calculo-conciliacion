@@ -131,7 +131,7 @@ export default function Sidebar({ activeView }) {
           <Icon name="calculator" size={21} />
         </span>
         <span className="text-sm font-bold text-white tracking-tight">
-          Conciliación de Materiales
+          {role === "USER_SE" ? "Semi-elaborado" : "Conciliación de Materiales"}
         </span>
       </Link>
 

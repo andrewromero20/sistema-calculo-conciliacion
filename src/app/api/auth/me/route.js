@@ -8,7 +8,7 @@ export async function GET() {
     return NextResponse.json({ authenticated: false, user: null }, { status: 401 });
   }
 
-  // Buscar el usuario en el repositorio para reflejar cambios de rol en tiempo real
+  // Buscar el usuario en el repositorio para reflejar cambios de rol o permisos en tiempo real
   const dbUser = await buscarUsuarioPorEmail(sessionUser.email);
   const user = dbUser
     ? {
@@ -16,13 +16,18 @@ export async function GET() {
         nombre: dbUser.nombre,
         email: dbUser.email,
         rol: dbUser.rol,
+        puedeEditar: Boolean(dbUser.puedeEditar),
       }
     : sessionUser;
 
   const response = NextResponse.json({ authenticated: true, user });
 
-  // Si el rol fue modificado por el administrador, renovar la cookie automáticamente
-  if (dbUser && dbUser.rol !== sessionUser.rol) {
+  // Si el rol o permiso fue modificado por el administrador, renovar la cookie automáticamente
+  if (
+    dbUser &&
+    (dbUser.rol !== sessionUser.rol ||
+      Boolean(dbUser.puedeEditar) !== Boolean(sessionUser.puedeEditar))
+  ) {
     const freshToken = await signToken(user);
     response.cookies.set({
       name: AUTH_COOKIE_NAME,

@@ -45,6 +45,28 @@ export function formatThousands(val, decimals = 0) {
 }
 
 /**
+ * Separa unidades de millar con comas (,) automáticamente:
+ * [1,000  10,000  100,000  1,000,000]
+ * Si tiene decimales, formatea la parte entera con comas y preserva la parte decimal.
+ * Si es un número decimal menor a 1 (ej. 0.0010445), la parte entera es 0 y se preserva sin comas.
+ */
+export function formatWithThousandSeparators(rawVal) {
+  if (rawVal === undefined || rawVal === null || rawVal === "") return "";
+  const str = String(rawVal).replace(/,/g, "").trim();
+  if (str === "") return "";
+
+  // Si contiene punto decimal
+  if (str.includes(".")) {
+    const parts = str.split(".");
+    const intFormatted = parts[0].replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+    return `${intFormatted}.${parts.slice(1).join(".")}`;
+  }
+
+  // Si es entero
+  return str.replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+}
+
+/**
  * Formateo estilo Excel:
  * - Si es número decimal: NO marca la unidad numérica con coma, conserva el punto decimal (.)
  * - Si es número entero: separa las unidades de millar automáticamente con comas (,)

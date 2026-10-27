@@ -104,6 +104,7 @@ export async function listarUsuarios() {
     nombre: u.nombre,
     email: u.email,
     rol: u.rol,
+    puedeEditar: Boolean(u.puedeEditar),
     fechaCreacion: u.fechaCreacion || new Date().toISOString(),
   }));
 }
@@ -141,6 +142,10 @@ export async function actualizarRolUsuario(id, nuevoRol) {
   const index = users.findIndex((u) => Number(u.id) === numericId);
   if (index !== -1) {
     users[index].rol = nuevoRol;
+    // Si deja de pertenecer a Semielaborados, se revoca el permiso de edición
+    if (nuevoRol !== "USER_SE") {
+      users[index].puedeEditar = false;
+    }
     writeUsersFallback(users);
     if (!updatedUser) {
       updatedUser = {
@@ -148,6 +153,7 @@ export async function actualizarRolUsuario(id, nuevoRol) {
         nombre: users[index].nombre,
         email: users[index].email,
         rol: users[index].rol,
+        puedeEditar: Boolean(users[index].puedeEditar),
         fechaCreacion: users[index].fechaCreacion,
       };
     }
@@ -157,6 +163,9 @@ export async function actualizarRolUsuario(id, nuevoRol) {
   const seed = SEED_USERS.find((u) => Number(u.id) === numericId);
   if (seed) {
     seed.rol = nuevoRol;
+    if (nuevoRol !== "USER_SE") {
+      seed.puedeEditar = false;
+    }
   }
 
   if (!updatedUser) {
@@ -164,6 +173,37 @@ export async function actualizarRolUsuario(id, nuevoRol) {
   }
 
   return updatedUser;
+}
+
+export async function actualizarPermisoEdicionUsuario(id, puedeEditar) {
+  const numericId = Number(id);
+  const users = readUsersFallback();
+  const index = users.findIndex((u) => Number(u.id) === numericId);
+  if (index === -1) {
+    throw new Error(`Usuario con ID ${id} no encontrado.`);
+  }
+
+  // Solo los usuarios pertenecientes al Semielaborado (USER_SE) pueden tener habilitado el permiso
+  if (users[index].rol !== "USER_SE" && puedeEditar) {
+    throw new Error("El permiso de edición únicamente puede habilitarse para usuarios de Semielaborado (Semi).");
+  }
+
+  users[index].puedeEditar = Boolean(puedeEditar);
+  writeUsersFallback(users);
+
+  // Sincronizar en memoria en SEED_USERS
+  const seed = SEED_USERS.find((u) => Number(u.id) === numericId);
+  if (seed) {
+    seed.puedeEditar = Boolean(puedeEditar);
+  }
+
+  return {
+    id: users[index].id,
+    nombre: users[index].nombre,
+    email: users[index].email,
+    rol: users[index].rol,
+    puedeEditar: Boolean(users[index].puedeEditar),
+  };
 }
 
 export async function buscarUsuarioPorEmail(email) {
@@ -193,6 +233,7 @@ export async function buscarUsuarioPorEmail(email) {
       email: found.email,
       password: found.password,
       rol: found.rol,
+      puedeEditar: Boolean(found.puedeEditar),
       fechaCreacion: found.fechaCreacion,
     };
   }
@@ -206,6 +247,7 @@ export async function buscarUsuarioPorEmail(email) {
     email: seed.email,
     password: seed.passwordRaw,
     rol: seed.rol,
+    puedeEditar: Boolean(seed.puedeEditar),
   };
 }
 

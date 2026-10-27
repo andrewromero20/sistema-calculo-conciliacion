@@ -1,11 +1,21 @@
 "use client";
 
 import { useRef } from "react";
-import { formatNumberExcel } from "@/lib/numberFormat";
+import { formatWithThousandSeparators } from "@/lib/numberFormat";
 
-function formatIntegerString(digits) {
-  if (!digits) return "";
-  return digits.replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+function calcCursorPosition(rawInput, prevCursor, formatted) {
+  const nonCommasBeforeCursor = rawInput.slice(0, prevCursor).replace(/,/g, "").length;
+  if (nonCommasBeforeCursor === 0) return 0;
+  let count = 0;
+  for (let i = 0; i < formatted.length; i++) {
+    if (formatted[i] !== ",") {
+      count++;
+    }
+    if (count === nonCommasBeforeCursor) {
+      return i + 1;
+    }
+  }
+  return formatted.length;
 }
 
 export default function FormattedNumberInput({
@@ -21,17 +31,10 @@ export default function FormattedNumberInput({
 }) {
   const inputRef = useRef(null);
 
-  // Determinar el valor a mostrar:
-  // Si es decimal: se muestra tal cual (sin comas de millar)
-  // Si es entero: se formatea automáticamente con separador de miles en tiempo real
+  // Valor a mostrar formateado automáticamente con separador de miles (,)
   let displayValue = "";
   if (value !== undefined && value !== null && value !== "") {
-    if (isDecimal) {
-      displayValue = String(value).replace(/,/g, "");
-    } else {
-      const cleanDigits = String(value).replace(/[^\d]/g, "");
-      displayValue = formatIntegerString(cleanDigits);
-    }
+    displayValue = formatWithThousandSeparators(value);
   }
 
   function handleKeyDownInternal(e) {
@@ -42,7 +45,7 @@ export default function FormattedNumberInput({
     }
 
     // Si el usuario presiona Backspace justo después de una coma, saltar la coma y borrar el dígito anterior
-    if (!isDecimal && e.key === "Backspace" && inputRef.current) {
+    if (e.key === "Backspace" && inputRef.current) {
       const input = inputRef.current;
       const start = input.selectionStart;
       const end = input.selectionEnd;
@@ -50,8 +53,16 @@ export default function FormattedNumberInput({
         const val = input.value;
         if (val[start - 1] === ",") {
           e.preventDefault();
-          const clean = (val.slice(0, start - 2) + val.slice(start)).replace(/[^\d]/g, "");
+          const clean = (val.slice(0, start - 2) + val.slice(start)).replace(/,/g, "");
           onChange(clean);
+          const rawBefore = val.slice(0, start - 2);
+          const formatted = formatWithThousandSeparators(clean);
+          const newPos = calcCursorPosition(rawBefore, rawBefore.length, formatted);
+          requestAnimationFrame(() => {
+            if (inputRef.current) {
+              inputRef.current.setSelectionRange(newPos, newPos);
+            }
+          });
           return;
         }
       }
@@ -63,46 +74,39 @@ export default function FormattedNumberInput({
   function handleChange(e) {
     const input = e.target;
     const prevCursor = input.selectionStart || 0;
-    const rawInput = e.target.value;
+    const rawInput = input.value;
 
     if (rawInput.includes("-") || rawInput.includes("e") || rawInput.includes("E")) return;
 
-    if (isDecimal) {
-      const clean = rawInput.replace(/,/g, "").trim();
-      if (clean === "" || /^\d*(\.\d*)?$/.test(clean)) {
-        onChange(clean);
-      }
-    } else {
-      // Contar dígitos numéricos antes del cursor antes del formateo
-      const digitsBeforeCursor = rawInput.slice(0, prevCursor).replace(/[^\d]/g, "").length;
-      const rawDigits = rawInput.replace(/[^\d]/g, "");
+    const clean = rawInput.replace(/,/g, "").trim();
 
-      if (rawDigits === "") {
-        onChange("");
-        return;
-      }
-
-      onChange(rawDigits);
-
-      // Calcular nueva posición del cursor tras la inserción automática de comas
-      const newFormatted = formatIntegerString(rawDigits);
-      requestAnimationFrame(() => {
-        if (!inputRef.current) return;
-        let newPos = 0;
-        let digitsSeen = 0;
-        for (let i = 0; i < newFormatted.length; i++) {
-          if (newFormatted[i] !== ",") {
-            digitsSeen++;
-          }
-          if (digitsSeen === digitsBeforeCursor) {
-            newPos = i + 1;
-            break;
-          }
-        }
-        if (digitsBeforeCursor === 0) newPos = 0;
-        inputRef.current.setSelectionRange(newPos, newPos);
-      });
+    if (clean === "") {
+      onChange("");
+      return;
     }
+
+    if (isDecimal) {
+      // Permitir números con o sin decimales (solo un punto)
+      if (!/^\d*(\.\d*)?$/.test(clean)) return;
+    } else {
+      // Solo números enteros
+      if (!/^\d*$/.test(clean)) return;
+    }
+
+    onChange(clean);
+
+    const formatted = formatWithThousandSeparators(clean);
+    const newPos = calcCursorPosition(rawInput, prevCursor, formatted);
+
+    // Actualizar sincrónicamente y en el siguiente ciclo de render
+    input.value = formatted;
+    input.setSelectionRange(newPos, newPos);
+
+    requestAnimationFrame(() => {
+      if (inputRef.current) {
+        inputRef.current.setSelectionRange(newPos, newPos);
+      }
+    });
   }
 
   return (

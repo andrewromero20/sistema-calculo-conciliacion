@@ -41,7 +41,7 @@ export default function SeDashboardPage() {
       <Sidebar activeView="se-inicio" />
       <main className="main-content space-y-6">
         <Header
-          title="Inicio (SE)"
+          title="Semi-elaborado"
           description="Control de pesadas, tableteado, recubrimiento y órdenes a granel."
         />
 
@@ -57,7 +57,7 @@ export default function SeDashboardPage() {
               </p>
             </div>
 
-            <div className="flex items-center gap-3">
+            <div className="flex flex-wrap items-center gap-3">
               <Link
                 href="/se/nuevo"
                 className="py-1.5 px-3.5 rounded-lg bg-[#0d6efd] hover:bg-[#0b5ed7] text-white text-xs font-bold transition flex items-center gap-1.5 shadow-xs whitespace-nowrap"
@@ -66,14 +66,36 @@ export default function SeDashboardPage() {
                 <span>Nuevo Registro</span>
               </Link>
 
-              <div className="w-full sm:w-64">
+              <div className="relative w-full sm:w-64">
+                <span className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400 z-10">
+                  <Icon name="search" size={14} />
+                </span>
                 <input
                   type="text"
                   placeholder="Buscar orden, lote..."
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
-                  className="w-full px-3 py-1.5 text-xs border border-slate-300 rounded-lg focus:outline-none focus:ring-1 focus:ring-blue-500"
+                  style={{
+                    height: "36px",
+                    paddingLeft: "32px",
+                    paddingRight: searchTerm ? "28px" : "10px",
+                    border: "1px solid #cbd5e1",
+                    borderRadius: "10px",
+                    backgroundColor: "#ffffff",
+                    fontSize: "12px",
+                  }}
+                  className="w-full text-slate-800 placeholder-slate-400 font-medium focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition"
                 />
+                {searchTerm && (
+                  <button
+                    type="button"
+                    onClick={() => setSearchTerm("")}
+                    className="absolute inset-y-0 right-0 pr-2.5 flex items-center text-slate-400 hover:text-slate-600 text-xs transition cursor-pointer z-10"
+                    title="Limpiar búsqueda"
+                  >
+                    ✕
+                  </button>
+                )}
               </div>
 
               <Link
@@ -98,51 +120,79 @@ export default function SeDashboardPage() {
               No se encontraron registros de Semielaborado que coincidan con la búsqueda.
             </div>
           ) : (
-            <div className="table-wrap">
-              <table className="min-w-full text-xs text-left">
-                <thead className="bg-slate-50 font-semibold text-slate-600 uppercase tracking-wider border-b border-slate-200">
+            <div className="overflow-x-auto">
+              <table className="min-w-full text-xs text-left divide-y divide-slate-200">
+                <thead className="bg-[#f8fafc] text-slate-700 font-bold uppercase tracking-wider text-[11px]">
                   <tr>
-                    <th className="px-3 py-3">Orden Granel</th>
-                    <th className="px-3 py-3">Lote</th>
-                    <th className="px-3 py-3">Producto</th>
-                    <th className="px-3 py-3">Peso Neto (kg)</th>
-                    <th className="px-3 py-3">Rendimiento</th>
-                    <th className="px-3 py-3">Fecha Registro</th>
-                    <th className="px-3 py-3 text-center">Acción</th>
+                    <th scope="col" className="px-4 py-3">
+                      Orden Granel
+                    </th>
+                    <th scope="col" className="px-4 py-3">
+                      Lote
+                    </th>
+                    <th scope="col" className="px-4 py-3">
+                      Producto
+                    </th>
+                    <th scope="col" className="px-4 py-3">
+                      Rendimiento
+                    </th>
+                    <th scope="col" className="px-4 py-3">
+                      Fin Tableteado
+                    </th>
+                    <th scope="col" className="px-4 py-3">
+                      Fin 1ra Carga
+                    </th>
+                    <th scope="col" className="px-4 py-3">
+                      Fecha Registro
+                    </th>
+                    <th scope="col" className="px-4 py-3 text-center">
+                      <span className="sr-only">Examinar</span>
+                    </th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100">
                   {filtered.slice(0, 8).map((item) => (
-                    <tr key={item.ordenGranel} className="hover:bg-slate-50 transition">
-                      <td className="px-3 py-3 font-mono font-bold text-blue-800">
+                    <tr key={item.ordenGranel} className="hover:bg-slate-50/80 transition">
+                      <td className="px-4 py-3 font-mono font-bold text-blue-700">
                         {item.ordenGranel}
                       </td>
-                      <td className="px-3 py-3 font-mono font-semibold text-slate-700">
+                      <td className="px-4 py-3 font-mono font-semibold text-slate-800">
                         {item.lote}
                       </td>
-                      <td className="px-3 py-3">
+                      <td className="px-4 py-3">
                         <span className="font-semibold text-slate-900 block">
                           {item.producto}
                         </span>
-                        <span className="text-[11px] text-slate-400 font-mono">
+                        <span className="text-[10px] text-slate-400 font-mono">
                           {item.codigoMaterial}
                         </span>
                       </td>
-                      <td className="px-3 py-3 font-mono font-bold text-slate-800">
-                        {Number(item.pesoNetoTotalTabletas || 0).toFixed(2)} kg
+                      <td className="px-4 py-3 font-mono font-bold">
+                        <span
+                          className={`px-2 py-0.5 rounded text-[11px] ${
+                            Number(item.rendimientoTab) >= 90.4 &&
+                            Number(item.rendimientoTab) <= 100.9
+                              ? "bg-emerald-50 text-emerald-800 border border-emerald-200"
+                              : "bg-amber-50 text-amber-800 border border-amber-200"
+                          }`}
+                        >
+                          {Number(item.rendimientoTab || 0).toFixed(1)}%
+                        </span>
                       </td>
-                      <td className="px-3 py-3 font-mono font-semibold text-emerald-700">
-                        {Number(item.rendimientoTab || 0).toFixed(1)}%
+                      <td className="px-4 py-3 text-slate-600 whitespace-nowrap">
+                        {item.fechaFinTableteado ? formatDateTime(item.fechaFinTableteado) : "-"}
                       </td>
-                      <td className="px-3 py-3 text-slate-500">
+                      <td className="px-4 py-3 text-slate-600 whitespace-nowrap">
+                        {item.fechaFinPrimeraCarga ? formatDateTime(item.fechaFinPrimeraCarga) : "-"}
+                      </td>
+                      <td className="px-4 py-3 text-slate-500 whitespace-nowrap">
                         {formatDateTime(item.fechaCreacion)}
                       </td>
-                      <td className="px-3 py-3 text-center">
+                      <td className="px-4 py-3 text-center">
                         <Link
                           href={`/se/${encodeURIComponent(item.ordenGranel)}`}
-                          className="py-1 px-3 rounded-md bg-[#0d6efd] hover:bg-[#0b5ed7] text-white font-bold text-xs transition inline-flex items-center gap-1 shadow-xs"
+                          className="inline-flex items-center justify-center py-1.5 px-3 rounded-md bg-[#0d6efd] hover:bg-[#0b5ed7] text-white text-xs font-bold transition shadow-xs cursor-pointer"
                         >
-                          <Icon name="search" size={13} />
                           <span>Examinar</span>
                         </Link>
                       </td>

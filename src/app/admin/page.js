@@ -99,9 +99,13 @@ export default function AdminPage() {
         throw new Error(data.error || "Error al actualizar el rol.");
       }
 
-      // Actualizar estado local
+      // Actualizar estado local (si cambia a PT o ADMIN, se revoca el permiso de edición)
       setUsuarios((prev) =>
-        prev.map((u) => (Number(u.id) === Number(userId) ? { ...u, rol: nuevoRol } : u))
+        prev.map((u) =>
+          Number(u.id) === Number(userId)
+            ? { ...u, rol: nuevoRol, puedeEditar: nuevoRol === "USER_SE" ? u.puedeEditar : false }
+            : u
+        )
       );
 
       setSuccessNotice(`Rol de ${nombreUsuario} actualizado a ${nombreRolNuevo} correctamente.`);
@@ -110,6 +114,52 @@ export default function AdminPage() {
       setErrorModal({
         isOpen: true,
         title: "Error al cambiar rol",
+        message: err.message,
+        type: "error",
+        actionText: "Entendido",
+        cancelText: "",
+        onConfirm: null,
+      });
+    } finally {
+      setUpdatingId(null);
+    }
+  }
+
+  // 4. Conmutar permiso de edición para usuarios de Semielaborados (Punto 5)
+  async function handleToggleEditPermission(targetUser) {
+    if (targetUser.rol !== "USER_SE") return;
+    const nuevoPermiso = !targetUser.puedeEditar;
+    setUpdatingId(targetUser.id);
+    setSuccessNotice("");
+
+    try {
+      const res = await fetch("/api/admin/users", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id: targetUser.id, puedeEditar: nuevoPermiso }),
+      });
+
+      const data = await res.json();
+      if (!res.ok) {
+        throw new Error(data.error || "Error al actualizar permiso de edición.");
+      }
+
+      setUsuarios((prev) =>
+        prev.map((u) =>
+          Number(u.id) === Number(targetUser.id) ? { ...u, puedeEditar: nuevoPermiso } : u
+        )
+      );
+
+      setSuccessNotice(
+        `Permiso de edición para "${targetUser.nombre}" ${
+          nuevoPermiso ? "habilitado" : "deshabilitado"
+        } exitosamente.`
+      );
+      setTimeout(() => setSuccessNotice(""), 4500);
+    } catch (err) {
+      setErrorModal({
+        isOpen: true,
+        title: "Error de Permisos",
         message: err.message,
         type: "error",
         actionText: "Entendido",
@@ -227,10 +277,10 @@ export default function AdminPage() {
           </div>
         </div>
 
-        {/* Barra de Filtros y Búsqueda */}
+        {/* Barra de Filtros y Búsqueda (Un solo recuadro con lupa interna como en historial) */}
         <div className="flex flex-wrap items-center justify-between gap-3">
-          <div className="flex-1 min-w-[280px] max-w-md flex items-center bg-white border border-slate-300 rounded-xl px-3.5 py-2.5 focus-within:ring-2 focus-within:ring-blue-500 focus-within:border-blue-500 transition shadow-xs">
-            <span className="text-slate-400 shrink-0 mr-2.5 flex items-center justify-center pointer-events-none">
+          <div className="relative flex-1 min-w-[280px] max-w-md">
+            <span className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400 z-10">
               <Icon name="search" size={16} />
             </span>
             <input
@@ -238,13 +288,23 @@ export default function AdminPage() {
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               placeholder="Buscar por nombre o correo electrónico..."
-              className="w-full text-sm font-medium focus:outline-none bg-transparent text-slate-800 placeholder-slate-400 border-none p-0"
+              style={{
+                height: "42px",
+                paddingLeft: "38px",
+                paddingRight: searchTerm ? "38px" : "14px",
+                border: "1px solid #cbd5e1",
+                borderRadius: "12px",
+                backgroundColor: "#ffffff",
+                boxShadow: "0 1px 2px rgba(0, 0, 0, 0.05)",
+                fontSize: "13px",
+              }}
+              className="w-full text-slate-800 placeholder-slate-400 font-medium focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition"
             />
             {searchTerm && (
               <button
                 type="button"
                 onClick={() => setSearchTerm("")}
-                className="text-slate-400 hover:text-slate-600 text-xs shrink-0 ml-2 transition cursor-pointer"
+                className="absolute inset-y-0 right-0 pr-3.5 flex items-center text-slate-400 hover:text-slate-600 text-xs transition cursor-pointer z-10"
                 title="Limpiar búsqueda"
               >
                 ✕
@@ -343,8 +403,8 @@ export default function AdminPage() {
                     <th scope="col" className="px-5 py-3.5">
                       Rol Actual
                     </th>
-                    <th scope="col" className="px-5 py-3.5">
-                      Fecha Registro
+                    <th scope="col" className="px-5 py-3.5 text-center">
+                      Permiso de edición
                     </th>
                     <th scope="col" className="px-5 py-3.5 text-center">
                       Asignar Rol (Semi / Terminado)
@@ -416,9 +476,34 @@ export default function AdminPage() {
                           )}
                         </td>
 
-                        {/* Fecha Registro */}
-                        <td className="px-5 py-3.5 text-slate-500 whitespace-nowrap font-mono">
-                          {formatDateTime(u.fechaCreacion)}
+                        {/* Permiso de edición (Punto 5) */}
+                        <td className="px-5 py-3.5 text-center">
+                          {u.rol === "USER_SE" ? (
+                            <label className="inline-flex items-center justify-center cursor-pointer p-1">
+                              <input
+                                type="checkbox"
+                                checked={Boolean(u.puedeEditar)}
+                                disabled={isUpdating}
+                                onChange={() => handleToggleEditPermission(u)}
+                                className="w-4 h-4 text-blue-600 bg-white border-slate-300 rounded focus:ring-blue-500 cursor-pointer transition accent-blue-600"
+                                title={
+                                  u.puedeEditar
+                                    ? "Permiso de edición habilitado. Clic para revocar."
+                                    : "Sin permiso de edición. Clic para habilitar."
+                                }
+                              />
+                              <span className="sr-only">Permiso de edición para {u.nombre}</span>
+                            </label>
+                          ) : (
+                            <div
+                              className="inline-flex items-center justify-center"
+                              title="No disponible para usuarios fuera de Semielaborado"
+                            >
+                              <div className="w-4 h-4 rounded bg-slate-700 border border-slate-600 opacity-60 flex items-center justify-center cursor-not-allowed select-none">
+                                <span className="text-[10px] text-slate-400 font-bold leading-none">✕</span>
+                              </div>
+                            </div>
+                          )}
                         </td>
 
                         {/* Selector de Rol: Semi vs Terminado */}

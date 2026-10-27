@@ -249,8 +249,8 @@ export default function SEDetailView({
     }
   }
 
-  // Permiso de edición: únicamente usuarios operativos de Semielaborados con permiso de edición activo
-  const canEdit = !isPTView && (user?.rol || userRole) === "USER_SE" && user?.puedeEditar !== false;
+  // Permiso de edición: únicamente usuarios de Semielaborados con permiso de edición habilitado por el administrador
+  const canEdit = !isPTView && (user?.rol || userRole) === "USER_SE" && user?.puedeEditar === true;
 
   function handleUsarComoPlantilla() {
     if (!registro) return;

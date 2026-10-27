@@ -340,8 +340,7 @@ export async function PUT(request, { params }) {
         nextData.cantidadDevueltaC,
       );
       const resultadoE = calcularEEtiquetaColectiva(
-        nextData.cantidadRealAcondicionada,
-        nextData.capacidadCajaEmpaque,
+        nextData.resultaodE,
       );
       const resultadoF = calcularFEtiquetaColectiva(nextData.otraMerma);
       const resultadoG = calcularGEtiquetaColectiva(nextData.cajasTomadasMuestra);
@@ -424,8 +423,7 @@ export async function PUT(request, { params }) {
         nextData.cantidadDevueltaC,
       );
       const resultadoE = calcularECajaEmpaque(
-        nextData.cantidadRealAcondicionada,
-        nextData.capacidadCajaEmpaque,
+        nextData.resultadoE,
       );
       const resultadoF = calcularFCajaEmpaque(nextData.otraMerma);
       const resultadoG = calcularGCajaEmpaque(nextData.cajasTomadasMuestra);

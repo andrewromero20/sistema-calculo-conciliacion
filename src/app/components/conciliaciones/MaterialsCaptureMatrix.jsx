@@ -630,29 +630,24 @@ function calculateEtiquetaColectivaPreview(
       ),
     );
 
-const resultadoE =
-  calcularEEtiquetaColectiva(
+  const resultadoE =
     parseOptionalNumber(
-      draft.cantidadRealAcondicionada,
-    ),
-    parseOptionalNumber(
-      draft.capacidadCajaEmpaque,
-    ),
-  );
+      draft.resultadoE,
+    );
 
-const resultadoF =
-  calcularFEtiquetaColectiva(
-    parseOptionalNumber(
-      draft.otraMerma,
-    ),
-  );
+  const resultadoF =
+    calcularFEtiquetaColectiva(
+      parseOptionalNumber(
+        draft.otraMerma,
+      ),
+    );
 
-const resultadoG =
-  calcularGEtiquetaColectiva(
-    parseOptionalNumber(
-      draft.cajasTomadasMuestra,
-    ),
-  );
+  const resultadoG =
+    calcularGEtiquetaColectiva(
+      parseOptionalNumber(
+        draft.cajasTomadasMuestra,
+      ),
+    );
 
   const totalUtilizadaH =
     calcularTotalUtilizadoAH(
@@ -742,13 +737,8 @@ function calculateCajaEmpaquePreview(
     );
 
   const resultadoE =
-    calcularECajaEmpaque(
-      parseOptionalNumber(
-        draft.cantidadRealAcondicionada,
-      ),
-      parseOptionalNumber(
-        draft.capacidadCajaEmpaque,
-      ),
+    parseOptionalNumber(
+      draft.resultadoE,
     );
 
   const resultadoF =
@@ -1074,14 +1064,9 @@ function buildEtiquetaColectivaPayload(
         draft.cantidadDevueltaC,
       ),
 
-    cantidadRealAcondicionada:
+    resultadoE:
       parseOptionalNumber(
-        draft.cantidadRealAcondicionada,
-      ),
-
-    capacidadCajaEmpaque:
-      parseOptionalNumber(
-        draft.capacidadCajaEmpaque,
+        draft.resultadoE,
       ),
 
     otraMerma:
@@ -1115,14 +1100,9 @@ function buildCajaEmpaquePayload(
         draft.cantidadDevueltaC,
       ),
 
-    cantidadRealAcondicionada:
+    resultadoE:
       parseOptionalNumber(
-        draft.cantidadRealAcondicionada,
-      ),
-
-    capacidadCajaEmpaque:
-      parseOptionalNumber(
-        draft.capacidadCajaEmpaque,
+        draft.resultadoE,
       ),
 
     otraMerma:
@@ -1680,7 +1660,7 @@ const [ materialMessages,setMaterialMessages,] = useState({});
             <thead>
               <tr>
                 <th className="matrix-concept-column">
-                  Concepto
+                  Descripcion
                 </th>
 
                 {materials.map((material) => (
@@ -1690,7 +1670,7 @@ const [ materialMessages,setMaterialMessages,] = useState({});
                   >
                     <strong>
                       {material.descripcion === "TABLETA"
-                        ? "TABLETA / BLÍSTER"
+                        ? "TABLETA (TAB)"
                         : material.descripcion}
                     </strong>
 
@@ -1714,7 +1694,7 @@ const [ materialMessages,setMaterialMessages,] = useState({});
               </tr>
                 <tr>
                     <th className="matrix-concept-column">
-                        Cantidad surtida
+                         (A) Cantidad Surtida Verificada
                     </th>
 
                     {materials.map((material) => {
@@ -1759,7 +1739,7 @@ const [ materialMessages,setMaterialMessages,] = useState({});
                 </tr>
                 <tr>
                 <th className="matrix-concept-column">
-                    Cantidad adicional
+                    (B) Cantidad Surtida Adicional
                 </th>
 
                 {materials.map((material) => {
@@ -1808,7 +1788,7 @@ const [ materialMessages,setMaterialMessages,] = useState({});
 
               <tr>
                 <th className="matrix-concept-column">
-                    Cantidad devuelta
+                    (C) Cantidad Devuelta al Almacen
                 </th>
 
                 {materials.map((material) => {
@@ -1856,7 +1836,7 @@ const [ materialMessages,setMaterialMessages,] = useState({});
 
               <tr>
                 <th className="matrix-concept-column">
-                    Total recibido
+                    (D) Total total Surtida
                 </th>
 
                 {materials.map((material) => {
@@ -1889,7 +1869,7 @@ const [ materialMessages,setMaterialMessages,] = useState({});
                 </tr>   
                 <tr>
                     <th className="matrix-concept-column">
-                        Cantidad utilizada
+                        (E) Cantidad utilizada
                     </th>
 
                     {materials.map((material) => {
@@ -1903,7 +1883,7 @@ const [ materialMessages,setMaterialMessages,] = useState({});
                         const isCajaEmpaque = material.descripcion === "CAJA EMPAQUE";
                         const isTableta = material.descripcion === "TABLETA";
 
-                        const usesCapacityCalculation = isEtiquetaColectiva || isCajaEmpaque;
+                        const usesManualCalculation = isEtiquetaColectiva || isCajaEmpaque;
 
                         const isManualE =
                           isFoil ||
@@ -1918,7 +1898,7 @@ const [ materialMessages,setMaterialMessages,] = useState({});
                         <td key={material.id}>
                           {isTableta ? (
                             <MatrixInputGroup
-                              resultLabel="Resultado E"
+                              resultLabel="Resultado E "
                               resultValue={formatQuantity(
                                 preview?.resultadoE,
                                 material.unidadMedida,
@@ -1963,7 +1943,7 @@ const [ materialMessages,setMaterialMessages,] = useState({});
                             </MatrixInputGroup>
                           ) : isCajaPlegadiza ? (
                             <MatrixInputGroup
-                              resultLabel="Resultado E"
+                              resultLabel="Resultado E "
                               resultValue={formatQuantity(
                                 preview?.resultadoE,
                                 material.unidadMedida,
@@ -1988,52 +1968,18 @@ const [ materialMessages,setMaterialMessages,] = useState({});
                                 }
                               />
                             </MatrixInputGroup>
-                          ) : usesCapacityCalculation ? (
-                            <MatrixInputGroup
-                              resultLabel="Resultado E"
-                              resultValue={formatQuantity(
-                                preview?.resultadoE,
-                                material.unidadMedida,
-                              )}
-                            >
-                              <span className="matrix-input-label">
-                                Cantidad real acondicionada
-                              </span>
-
-                              <MatrixNumberInput
-                                value={
-                                  draft?.cantidadRealAcondicionada ??
-                                  ""
-                                }
-                                unit="PZA"
-                                onChange={(value) =>
-                                  updateDraft(
-                                    material.id,
-                                    "cantidadRealAcondicionada",
-                                    value,
-                                  )
-                                }
-                              />
-
-                              <span className="matrix-input-label">
-                                Capacidad por caja
-                              </span>
-
-                              <MatrixNumberInput
-                                value={
-                                  draft?.capacidadCajaEmpaque ??
-                                  ""
-                                }
-                                unit="PZA"
-                                onChange={(value) =>
-                                  updateDraft(
-                                    material.id,
-                                    "capacidadCajaEmpaque",
-                                    value,
-                                  )
-                                }
-                              />
-                            </MatrixInputGroup>
+                          ) : usesManualCalculation ? (
+                            <MatrixNumberInput
+                              value={draft?.resultadoE ?? ""}
+                              unit={material.unidadMedida}
+                              onChange={(value) =>
+                                updateDraft(
+                                  material.id,
+                                  "resultadoE",
+                                  value,
+                                )
+                              }
+                            />
                           ) : isManualE ? (
                             <MatrixNumberInput
                               value={draft?.resultadoE ?? ""}
@@ -2059,7 +2005,7 @@ const [ materialMessages,setMaterialMessages,] = useState({});
                 </tr>
                 <tr>
                     <th className="matrix-concept-column">
-                        Merma/ Cantidad utilizada
+                        (F) Cantidad de merma
                     </th>
 
                     {materials.map((material) => {
@@ -2087,7 +2033,7 @@ const [ materialMessages,setMaterialMessages,] = useState({});
                         <td key={material.id}>
                             {isTableta ? (
                               <MatrixInputGroup
-                                resultLabel="Resultado F"
+                                resultLabel="Resultado F "
                                 resultValue={formatQuantity(
                                   preview?.resultadoF,
                                   material.unidadMedida,
@@ -2143,7 +2089,7 @@ const [ materialMessages,setMaterialMessages,] = useState({});
                               </MatrixInputGroup>
                             ) : usesCalculatedMerma ? (
                               <MatrixInputGroup
-                                resultLabel="Resultado F"
+                                resultLabel="Resultado F "
                                 resultValue={formatQuantity(
                                   preview?.resultadoF,
                                   material.unidadMedida,
@@ -2189,7 +2135,7 @@ const [ materialMessages,setMaterialMessages,] = useState({});
                 </tr>
                 <tr>
                   <th className="matrix-concept-column">
-                    Muestras
+                    (G) Cantidad total de muestra
                   </th>
 
                   {materials.map((material) => {
@@ -2228,7 +2174,7 @@ const [ materialMessages,setMaterialMessages,] = useState({});
                       >
                         {isFoil ? (
                           <MatrixInputGroup
-                            resultLabel="Resultado G"
+                            resultLabel="Resultado G "
                             resultValue={formatQuantity(
                               preview?.resultadoG,
                               material.unidadMedida,
@@ -2252,7 +2198,7 @@ const [ materialMessages,setMaterialMessages,] = useState({});
                           </MatrixInputGroup>
                         ) : isTableta ? (
                           <MatrixInputGroup
-                            resultLabel="Resultado G"
+                            resultLabel="Resultado G "
                             resultValue={formatQuantity(
                               preview?.resultadoG,
                               material.unidadMedida,
@@ -2278,7 +2224,7 @@ const [ materialMessages,setMaterialMessages,] = useState({});
                           </MatrixInputGroup>
                         ) : isCajaPlegadiza ? (
                           <MatrixInputGroup
-                            resultLabel="Resultado G"
+                            resultLabel="Resultado G "
                             resultValue={formatQuantity(
                               preview?.resultadoG,
                               material.unidadMedida,
@@ -2323,7 +2269,7 @@ const [ materialMessages,setMaterialMessages,] = useState({});
                           </MatrixInputGroup>
                         ) : usesSingleSampleInput ? (
                           <MatrixInputGroup
-                            resultLabel="Resultado G"
+                            resultLabel="Resultado G "
                             resultValue={formatQuantity(
                               preview?.resultadoG,
                               material.unidadMedida,
@@ -2374,7 +2320,7 @@ const [ materialMessages,setMaterialMessages,] = useState({});
                 
                 <tr>
                     <th className="matrix-concept-column">
-                        Total utilizado
+                        (H) Cantidad total utilizada
                     </th>
 
                     {materials.map((material) => {

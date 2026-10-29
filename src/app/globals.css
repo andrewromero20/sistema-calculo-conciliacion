@@ -176,8 +176,10 @@ label { display: block; font-weight: 600; margin-bottom: 8px; }input, select { w
 .materials-matrix-wrapper {
   width: 100%;
   min-width: 0;
-  overflow-x: auto;
-  border-top: 1px solid var(--line);
+  max-height: 72vh;
+  overflow: auto;
+  border: 1px solid var(--line);
+  border-radius: 6px;
 }
 
 .materials-capture-matrix {
@@ -210,11 +212,12 @@ label { display: block; font-weight: 600; margin-bottom: 8px; }input, select { w
 }
 
 .materials-capture-matrix thead th {
-  color: #344054;
-  font-size: 11px;
-  letter-spacing: 0.045em;
-  text-transform: uppercase;
-}
+  position: sticky;
+  top: 0;
+  z-index: 5;
+  background: #eaf3ff;
+  box-shadow: 0 1px 0 #d7dee8;
+} 
 
 .matrix-concept-column {
   position: sticky;
@@ -231,16 +234,24 @@ label { display: block; font-weight: 600; margin-bottom: 8px; }input, select { w
 
 .materials-capture-matrix thead
   .matrix-concept-column {
-  z-index: 5;
+  position: sticky;
+  top: 0;
+  left: 0;
+  z-index: 8;
+  background: #f8fafc;
 }
 
-.matrix-material-column {
-  width: 190px;
-  min-width: 190px;
-  padding: 13px 10px !important;
-  color: #175cd3 !important;
-  background: #eaf3ff !important;
-  text-align: center !important;
+.matrix-concept-column {
+  position: sticky;
+  left: 0;
+  z-index: 3;
+  width: 210px;
+  min-width: 210px;
+  max-width: 210px;
+  color: #344054;
+  background: #f8fafc;
+  box-shadow: 1px 0 0 #dfe5ec;
+  text-align: left !important;
 }
 
 .matrix-material-column strong {
@@ -334,26 +345,7 @@ label { display: block; font-weight: 600; margin-bottom: 8px; }input, select { w
   font-size: 11px;
 }
 
-.legacy-materials-view {
-  padding: 13px 14px;
-  border: 1px solid var(--line);
-  border-radius: 9px;
-  background: #ffffff;
-}
 
-.legacy-materials-view summary {
-  cursor: pointer;
-  color: #344054;
-  font-weight: 700;
-}
-
-.legacy-materials-view summary:hover {
-  color: var(--blue);
-}
-
-.legacy-materials-view[open] summary {
-  margin-bottom: 16px;
-}
 @media (max-width: 900px) {
   .materials-matrix-header {
     align-items: stretch;
@@ -383,8 +375,12 @@ label { display: block; font-weight: 600; margin-bottom: 8px; }input, select { w
   }
 
   .matrix-material-column {
-    width: 165px;
-    min-width: 165px;
+    width: 190px;
+    min-width: 190px;
+    padding: 13px 10px !important;
+    color: #175cd3 !important;
+    background: #eaf3ff !important;
+    text-align: center !important;
   }
 }
 

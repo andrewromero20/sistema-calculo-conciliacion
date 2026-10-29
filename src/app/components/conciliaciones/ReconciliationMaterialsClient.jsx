@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import MaterialsCaptureMatrix from "./MaterialsCaptureMatrix";
-import MaterialsSection from "./MaterialsSection";
+
 
 export default function ReconciliationMaterialsClient({
   numeroOrden,
@@ -66,18 +66,6 @@ export default function ReconciliationMaterialsClient({
           handleMaterialDeleted
         }
       />
-
-      <details className="legacy-materials-view">
-        <summary>
-          Mostrar vista anterior de materiales
-        </summary>
-
-        <MaterialsSection
-          numeroOrden={numeroOrden}
-          conciliacionId={conciliacionId}
-          materials={materials}
-        />
-      </details>
     </div>
   );
 }

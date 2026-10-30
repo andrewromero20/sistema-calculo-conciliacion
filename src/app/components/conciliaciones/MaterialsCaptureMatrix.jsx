@@ -1295,6 +1295,62 @@ function buildTabletaPayload(draft) {
   };
 }
 
+function isMatrixSupportedMaterial(material) {
+  return [
+    "TABLETA",
+    "CAJA PLEGADIZA",
+    "ETIQUETA COLECTIVA",
+    "CAJA EMPAQUE",
+    "INSTRUCTIVO",
+    "SELLO GARANTÍA",
+    "FOIL PVC",
+    "FOIL ALUMINIO",
+  ].includes(material.descripcion);
+}
+
+function buildMatrixMaterialPayload(
+  material,
+  draft,
+) {
+  const isFoil = [
+    "FOIL PVC",
+    "FOIL ALUMINIO",
+  ].includes(material.descripcion);
+
+  switch (material.descripcion) {
+    case "TABLETA":
+      return buildTabletaPayload(draft);
+
+    case "CAJA PLEGADIZA":
+      return buildCajaPlegadizaPayload(
+        draft,
+      );
+
+    case "ETIQUETA COLECTIVA":
+      return buildEtiquetaColectivaPayload(
+        draft,
+      );
+
+    case "CAJA EMPAQUE":
+      return buildCajaEmpaquePayload(
+        draft,
+      );
+
+    case "INSTRUCTIVO":
+    case "SELLO GARANTÍA":
+    case "FOIL PVC":
+    case "FOIL ALUMINIO":
+      return buildDirectMbrPayload(
+        draft,
+        true,
+      );
+
+    default:
+      throw new Error(
+        `El material ${material.descripcion} no está soportado.`,
+      );
+  }
+}
 export default function MaterialsCaptureMatrix({
   materials = [],
   numeroOrden,
@@ -1316,12 +1372,22 @@ export default function MaterialsCaptureMatrix({
 
   const [drafts, setDrafts] = useState(
   () => createInitialDrafts(materials),
-);
+  );
 
-const [savingMaterialIds, setSavingMaterialIds,] = useState({});
+  const [
+    savingMaterialIds,
+    setSavingMaterialIds,
+  ] = useState({});
 
-const [ materialMessages,setMaterialMessages,] = useState({});
+  const [
+    savingAllMaterials,
+    setSavingAllMaterials,
+  ] = useState(false);
 
+  const [
+    saveAllMessage,
+    setSaveAllMessage,
+  ] = useState("");
   const existingDescriptions = useMemo(
     () =>
       new Set(
@@ -1415,110 +1481,162 @@ const [ materialMessages,setMaterialMessages,] = useState({});
     setError("");
     }
 
-    async function saveMatrixMaterial(material) {
-        const draft = drafts[material.id];
-        const isSelloGarantia = material.descripcion === "SELLO GARANTÍA";
-        const isCajaPlegadiza = material.descripcion === "CAJA PLEGADIZA";
-        const isInstructivo = material.descripcion === "INSTRUCTIVO";
-        const isEtiquetaColectiva = material.descripcion === "ETIQUETA COLECTIVA";
-        const isCajaEmpaque = material.descripcion === "CAJA EMPAQUE";
-        const isTableta = material.descripcion === "TABLETA";
+    async function saveMatrixMaterial(
+      material,
+      options = {},
+    ) {
+      const {
+        showIndividualMessage = true,
+      } = options;
 
-        const isFoil = [
-            "FOIL PVC",
-            "FOIL ALUMINIO",
-        ].includes(material.descripcion);
-    
+      const draft = drafts[material.id];
 
-        if (!draft) {
-            setError(
-            "No se encontraron los datos del material.",
-            );
-            return;
-        }
+      if (!draft) {
+        throw new Error(
+          `No se encontraron los datos de ${material.descripcion}.`,
+        );
+      }
 
-        
+      if (!isMatrixSupportedMaterial(material)) {
+        throw new Error(
+          `El material ${material.descripcion} no está soportado.`,
+        );
+      }
 
-        
-        if (!isFoil && !isInstructivo && !isSelloGarantia && !isCajaPlegadiza && !isEtiquetaColectiva && !isCajaEmpaque && !isTableta) {
-            return;
-        }
+      const payload =
+        buildMatrixMaterialPayload(
+          material,
+          draft,
+        );
 
-        
+      setSavingMaterialIds((current) => ({
+        ...current,
+        [material.id]: true,
+      }));
 
-        let payload;
-
-
-        if (isTableta) {
-          payload = buildTabletaPayload(draft);
-        } else if (isCajaPlegadiza) {
-          payload =
-            buildCajaPlegadizaPayload(draft);
-        } else if (isEtiquetaColectiva) {
-          payload =
-            buildEtiquetaColectivaPayload(
-              draft,
-            );
-        } else if (isCajaEmpaque) {
-          payload = buildCajaEmpaquePayload(draft);
-        } else {
-          payload =
-            buildDirectMbrPayload(
-              draft,
-              true,
-            );
-        }
-
-        setSavingMaterialIds((current) => ({
-            ...current,
-            [material.id]: true,
-        }));
-
+      if (showIndividualMessage) {
         setMaterialMessages((current) => ({
-            ...current,
-            [material.id]: "",
+          ...current,
+          [material.id]: "",
+        }));
+      }
+
+      try {
+        const updatedMaterial =
+          await actualizarMaterial(
+            material.id,
+            payload,
+          );
+
+        setDrafts((currentDrafts) => ({
+          ...currentDrafts,
+          [material.id]:
+            createMaterialDraft(
+              updatedMaterial,
+            ),
         }));
 
-        setError("");
+        onMaterialUpdated?.(
+          updatedMaterial,
+        );
 
-        try {
-            const updatedMaterial =
-            await actualizarMaterial(
-                material.id,
-                payload,
-            );
-
-            setDrafts((currentDrafts) => ({
-            ...currentDrafts,
-            [material.id]:
-                createMaterialDraft(
-                updatedMaterial,
-                ),
-            }));
-
-            onMaterialUpdated?.(
-            updatedMaterial,
-            );
-
-            setMaterialMessages((current) => ({
+        if (showIndividualMessage) {
+          setMaterialMessages((current) => ({
             ...current,
             [material.id]:
-                "Guardado correctamente.",
-            }));
-        } catch (saveError) {
-            setMaterialMessages((current) => ({
+              "Guardado correctamente.",
+          }));
+        }
+
+        return updatedMaterial;
+      } catch (saveError) {
+        if (showIndividualMessage) {
+          setMaterialMessages((current) => ({
             ...current,
             [material.id]:
-                saveError instanceof Error
+              saveError instanceof Error
                 ? saveError.message
                 : "No fue posible guardar.",
-            }));
-        } finally {
-            setSavingMaterialIds((current) => ({
-            ...current,
-            [material.id]: false,
-            }));
+          }));
         }
+
+        throw saveError;
+      } finally {
+        setSavingMaterialIds((current) => ({
+          ...current,
+          [material.id]: false,
+        }));
+      }
+    }
+
+    async function saveAllMaterials() {
+      if (savingAllMaterials) {
+        return;
+      }
+
+      const supportedMaterials =
+        materials.filter(
+          isMatrixSupportedMaterial,
+        );
+
+      if (supportedMaterials.length === 0) {
+        setSaveAllMessage(
+          "No hay materiales para guardar.",
+        );
+        return;
+      }
+
+      setSavingAllMaterials(true);
+      setSaveAllMessage("");
+      setError("");
+
+      const successfulMaterials = [];
+      const failedMaterials = [];
+
+      for (const material of supportedMaterials) {
+        try {
+          await saveMatrixMaterial(
+            material,
+            {
+              showIndividualMessage: false,
+            },
+          );
+
+          successfulMaterials.push(
+            material.descripcion,
+          );
+        } catch (saveError) {
+          failedMaterials.push({
+            descripcion:
+              material.descripcion,
+
+            message:
+              saveError instanceof Error
+                ? saveError.message
+                : "Error desconocido.",
+          });
+        }
+      }
+
+      if (failedMaterials.length === 0) {
+        setSaveAllMessage(
+          `Se guardaron correctamente ${successfulMaterials.length} materiales.`,
+        );
+      } else {
+        const failedNames =
+          failedMaterials
+            .map(
+              (failure) =>
+                failure.descripcion,
+            )
+            .join(", ");
+
+        setSaveAllMessage(
+          `Se guardaron ${successfulMaterials.length} materiales. No fue posible guardar: ${failedNames}.`,
+        );
+      }
+
+      setSavingAllMaterials(false);
     }
 
   return (
@@ -1528,26 +1646,57 @@ const [ materialMessages,setMaterialMessages,] = useState({});
           <h2>Matriz de captura</h2>
 
           <p>
-            Agrega los materiales de la orden y
-            captura sus valores directamente en la
-            tabla.
+            Captura los valores y guarda todos los
+            materiales al finalizar.
           </p>
         </div>
 
-        {!showAddForm && (
-            <button
-                type="button"
-                className="button primary"
-                onClick={() => {
-                setShowAddForm(true);
-                setError("");
-                }}
-                disabled={availableMaterials.length === 0}
-            >
-                + Agregar material
-            </button>
-            )}
+        <div className="matrix-header-actions">
+          <button
+            type="button"
+            className="button secondary"
+            onClick={() => {
+              setShowAddForm(true);
+              setError("");
+            }}
+            disabled={
+              showAddForm ||
+              availableMaterials.length === 0 ||
+              savingAllMaterials
+            }
+          >
+            + Agregar material
+          </button>
+
+          <button
+            type="button"
+            className="button primary"
+            onClick={saveAllMaterials}
+            disabled={
+              savingAllMaterials ||
+              materials.length === 0
+            }
+          >
+            {savingAllMaterials
+              ? "Guardando materiales..."
+              : "Guardar todos"}
+          </button>
+        </div>
       </div>
+
+      {saveAllMessage && (
+        <p
+          className={
+            saveAllMessage.startsWith(
+              "Se guardaron correctamente",
+            )
+              ? "matrix-save-all-message success"
+              : "matrix-save-all-message warning"
+          }
+        >
+          {saveAllMessage}
+        </p>
+      )}
 
       {showAddForm && (
         <form
@@ -2478,70 +2627,6 @@ const [ materialMessages,setMaterialMessages,] = useState({});
                         );
                     })}
                 </tr>
-
-                <tr className="matrix-actions-row">
-                    <th className="matrix-concept-column">
-                        Acciones
-                    </th>
-
-                    {materials.map((material) => {
-                        const isSupportedMaterial = [
-                            "FOIL PVC",
-                            "FOIL ALUMINIO",
-                            "INSTRUCTIVO",
-                            "SELLO GARANTÍA",
-                            "CAJA PLEGADIZA",
-                            "ETIQUETA COLECTIVA",
-                            "CAJA EMPAQUE",
-                            "TABLETA",
-                        ].includes(material.descripcion);
-
-                        const isSaving = Boolean(
-                        savingMaterialIds[material.id],
-                        );
-
-                        const message =
-                        materialMessages[material.id];
-
-                        return (
-                        <td key={material.id}>
-                            {isSupportedMaterial ? (
-                            <div className="matrix-save-area">
-                                <button
-                                type="button"
-                                className="button primary matrix-save-button"
-                                disabled={isSaving}
-                                onClick={() =>
-                                    saveMatrixMaterial(material)
-                                }
-                                >
-                                {isSaving
-                                    ? "Guardando..."
-                                    : "Guardar"}
-                                </button>
-
-                                {message && (
-                                <small
-                                    className={
-                                    message ===
-                                    "Guardado correctamente."
-                                        ? "matrix-save-message success"
-                                        : "matrix-save-message error"
-                                    }
-                                >
-                                    {message}
-                                </small>
-                                )}
-                            </div>
-                            ) : (
-                            <span className="matrix-pending-support">
-                                Próximamente
-                            </span>
-                            )}
-                        </td>
-                        );
-                    })}
-                    </tr>
 
             </tbody>
           </table>

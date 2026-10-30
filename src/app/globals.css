@@ -310,27 +310,6 @@ label { display: block; font-weight: 600; margin-bottom: 8px; }input, select { w
   font-weight: 700;
 }
 
-.matrix-actions-row td {
-  background: #f8fafc;
-}
-
-.matrix-save-area {
-  display: flex;
-  flex-direction: column;
-  gap: 7px;
-}
-
-.matrix-save-button {
-  width: 100%;
-  min-height: 36px;
-}
-
-.matrix-save-message {
-  display: block;
-  font-size: 10px;
-  line-height: 1.35;
-  white-space: normal;
-}
 
 .matrix-save-message.success {
   color: #176b3a;
@@ -340,9 +319,57 @@ label { display: block; font-weight: 600; margin-bottom: 8px; }input, select { w
   color: #b42318;
 }
 
-.matrix-pending-support {
-  color: var(--muted);
-  font-size: 11px;
+.matrix-header-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 10px;
+}
+
+.matrix-footer-actions {
+  display: flex;
+  justify-content: flex-end;
+  padding: 16px 18px 18px;
+  border-top: 1px solid var(--line);
+  background: #f8fafc;
+}
+
+.matrix-save-all-message {
+  margin: 0 18px;
+  padding: 11px 13px;
+  border: 1px solid;
+  border-radius: 7px;
+  font-size: 13px;
+  line-height: 1.4;
+}
+
+.matrix-save-all-message.success {
+  color: #176b3a;
+  background: #ecfdf3;
+  border-color: #b7ebc9;
+}
+
+.matrix-save-all-message.warning {
+  color: #8a5a00;
+  background: #fff9e8;
+  border-color: #f4d98b;
+}
+
+@media (max-width: 640px) {
+  .matrix-header-actions {
+    align-items: stretch;
+    flex-direction: column;
+    width: 100%;
+  }
+
+  .matrix-header-actions .button,
+  .matrix-footer-actions .button {
+    width: 100%;
+  }
+
+  .matrix-footer-actions {
+    padding: 14px 16px 16px;
+  }
 }
 
 
